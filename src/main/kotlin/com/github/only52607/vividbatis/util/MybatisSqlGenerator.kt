@@ -18,14 +18,14 @@ class MybatisSqlGenerator {
     private fun processXmlTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
         return when (tag.name) {
             "include" -> processIncludeTag(tag, parameters, template)
-            "if" -> processIfTag(tag, parameters, template)
+            "if" -> processConditionalTag(tag, parameters, template)
             "foreach" -> processForeachTag(tag, parameters, template)
             "where" -> processWhereTag(tag, parameters, template)
             "set" -> processSetTag(tag, parameters, template)
             "choose" -> processChooseTag(tag, parameters, template)
-            "when" -> processWhenTag(tag, parameters, template)
-            "otherwise" -> processOtherwiseTag(tag, parameters, template)
-            else -> processRegularTag(tag, parameters, template)
+            "when" -> processConditionalTag(tag, parameters, template)
+            "otherwise" -> processChildTags(tag, parameters, template)
+            else -> processChildTags(tag, parameters, template)
         }
     }
     
@@ -51,7 +51,7 @@ class MybatisSqlGenerator {
         } else ""
     }
     
-    private fun processIfTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+    private fun processConditionalTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
         val test = tag.getAttributeValue("test") ?: return ""
         return if (evaluateCondition(test, parameters)) {
             processChildTags(tag, parameters, template)
@@ -109,35 +109,6 @@ class MybatisSqlGenerator {
         return tag.subTags.find { it.name == "otherwise" }?.let { 
             processChildTags(it, parameters, template) 
         } ?: ""
-    }
-    
-    private fun processWhenTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
-        val test = tag.getAttributeValue("test") ?: return ""
-        return if (evaluateCondition(test, parameters)) {
-            processChildTags(tag, parameters, template)
-        } else ""
-    }
-    
-    private fun processOtherwiseTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
-        return processChildTags(tag, parameters, template)
-    }
-    
-    private fun processRegularTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
-        val builder = StringBuilder()
-        
-        tag.value.children.forEach { child ->
-            when {
-                child is XmlTag -> builder.append(processXmlTag(child, parameters, template))
-                else -> {
-                    val text = child.text
-                    if (text.isNotBlank()) {
-                        builder.append(replaceParameters(text, parameters))
-                    }
-                }
-            }
-        }
-        
-        return builder.toString()
     }
     
     private fun processChildTags(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
