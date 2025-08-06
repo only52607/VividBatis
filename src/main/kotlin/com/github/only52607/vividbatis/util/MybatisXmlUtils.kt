@@ -52,7 +52,13 @@ object MybatisXmlUtils {
     }
 
     fun isMybatisMapperFile(element: XmlTag): Boolean {
-        val rootTag = element.parentTag
-        return rootTag is XmlTag && rootTag.name == "mapper" && rootTag.getAttributeValue("namespace") != null
+        // 向上遍历XML树，查找根节点
+        var current = element
+        while (current.parentTag != null) {
+            current = current.parentTag!!
+        }
+        
+        // 检查根节点是否为mapper标签且有namespace属性
+        return current.name == "mapper" && current.getAttributeValue("namespace") != null
     }
 } 

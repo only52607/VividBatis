@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- MyBatis OGNL Language Injections -->
+
+<!-- if tag test attribute -->
+<injection language="OGNL" injector-id="xml">
+    <display-name>MyBatis if test</display-name>
+    <place><![CDATA[
+        xmlAttributeValue()
+        .withLocalName("test")
+        .withParent(
+            xmlAttribute()
+            .withParent(
+                xmlTag()
+                .withLocalName("if")
+            )
+        )
+    ]]></place>
+</injection>
+
+<!-- when tag test attribute -->
+<injection language="OGNL" injector-id="xml">
+    <display-name>MyBatis when test</display-name>
+    <place><![CDATA[
+        xmlAttributeValue()
+        .withLocalName("test")
+        .withParent(
+            xmlAttribute()
+            .withParent(
+                xmlTag()
+                .withLocalName("when")
+            )
+        )
+    ]]></place>
+</injection>
+
+<!-- foreach tag collection attribute -->
+<injection language="OGNL" injector-id="xml">
+    <display-name>MyBatis foreach collection</display-name>
+    <place><![CDATA[
+        xmlAttributeValue()
+        .withLocalName("collection")
+        .withParent(
+            xmlAttribute()
+            .withParent(
+                xmlTag()
+                .withLocalName("foreach")
+            )
+        )
+    ]]></place>
+</injection>
+
+<!-- bind tag value attribute -->
+<injection language="OGNL" injector-id="xml">
+    <display-name>MyBatis bind value</display-name>
+    <place><![CDATA[
+        xmlAttributeValue()
+        .withLocalName("value")
+        .withParent(
+            xmlAttribute()
+            .withParent(
+                xmlTag()
+                .withLocalName("bind")
+            )
+        )
+    ]]></place>
+</injection>

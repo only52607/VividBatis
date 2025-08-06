@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.TestMapper">
+
+    <!-- Test OGNL injection in if tag -->
+    <select id="selectUsers" resultType="User">
+        SELECT * FROM users
+        <where>
+            <if test="name != null and name != ''">
+                AND name = #{name}
+            </if>
+            <if test="age != null and age > 0">
+                AND age = #{age}
+            </if>
+            <if test="status in {'active', 'pending'}">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <!-- Test OGNL injection in choose/when tags -->
+    <select id="selectUsersByType" resultType="User">
+        SELECT * FROM users
+        <where>
+            <choose>
+                <when test="type == 'admin'">
+                    AND role = 'ADMIN'
+                </when>
+                <when test="type == 'user' and active == true">
+                    AND role = 'USER' AND status = 'ACTIVE'
+                </when>
+                <otherwise>
+                    AND status = 'INACTIVE'
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <!-- Test deeply nested OGNL injection -->
+    <select id="selectUsersComplex" resultType="User">
+        SELECT * FROM users
+        <where>
+            <choose>
+                <when test="searchType == 'basic'">
+                    <if test="name != null and name.length() > 0">
+                        AND name LIKE #{name}
+                    </if>
+                    <if test="email != null">
+                        AND email = #{email}
+                    </if>
+                </when>
+                <when test="searchType == 'advanced'">
+                    <if test="filters != null and filters.size() > 0">
+                        <foreach collection="filters" item="filter" separator=" AND ">
+                            <if test="filter.field == 'age' and filter.value != null">
+                                AND age ${filter.operator} #{filter.value}
+                            </if>
+                            <if test="filter.field == 'status' and filter.value in {'active', 'inactive'}">
+                                AND status = #{filter.value}
+                            </if>
+                        </foreach>
+                    </if>
+                </when>
+                <otherwise>
+                    AND 1=1
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <!-- Test OGNL injection in foreach tag -->
+    <select id="selectUsersByIds" resultType="User">
+        SELECT * FROM users
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- Test OGNL injection in bind tag -->
+    <select id="selectUsersWithPattern" resultType="User">
+        <bind name="pattern" value="'%' + keyword + '%'"/>
+        SELECT * FROM users
+        WHERE name LIKE #{pattern}
+    </select>
+
+</mapper>

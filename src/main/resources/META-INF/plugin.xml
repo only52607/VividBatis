@@ -7,15 +7,35 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.xml</depends>
     <depends>com.intellij.modules.java</depends>
+    <depends optional="true" config-file="mybatis-ognl-injections.xml">org.intellij.intelliLang</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
+        <!-- Tool Window -->
         <toolWindow factoryClass="com.github.only52607.vividbatis.toolWindow.SqlPreviewToolWindowFactory" 
                     id="VividBatis" 
                     displayName="VividBatis"
                     anchor="right"/>
+        
+        <!-- Line Marker Provider -->
         <codeInsight.lineMarkerProvider language="XML" 
                                         implementationClass="com.github.only52607.vividbatis.linemarker.MybatisStatementLineMarkerProvider"/>
+        
+        <!-- OGNL Language Support -->
+        <fileType name="OGNL" 
+                  implementationClass="com.github.only52607.vividbatis.language.OgnlFileType" 
+                  fieldName="INSTANCE" 
+                  language="OGNL" 
+                  extensions="ognl"/>
+        
+        <lang.parserDefinition language="OGNL" 
+                               implementationClass="com.github.only52607.vividbatis.language.OgnlParserDefinition"/>
+        
+        <lang.syntaxHighlighterFactory language="OGNL" 
+                                       implementationClass="com.github.only52607.vividbatis.language.OgnlSyntaxHighlighterFactory"/>
+        
+        <!-- OGNL Language Injection -->
+        <multiHostInjector implementation="com.github.only52607.vividbatis.injection.MybatisOgnlInjector"/>
     </extensions>
 </idea-plugin>
