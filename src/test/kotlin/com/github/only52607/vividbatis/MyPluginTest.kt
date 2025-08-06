@@ -6,7 +6,8 @@ import com.intellij.psi.xml.XmlFile
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.PsiErrorElementUtil
-import com.github.only52607.vividbatis.services.MyProjectService
+import com.github.only52607.vividbatis.services.ParameterAnalysisService
+import com.github.only52607.vividbatis.services.SqlGenerationService
 
 @TestDataPath("\$CONTENT_ROOT/src/test/testData")
 class MyPluginTest : BasePlatformTestCase() {
@@ -29,10 +30,18 @@ class MyPluginTest : BasePlatformTestCase() {
         myFixture.testRename("foo.xml", "foo_after.xml", "a2")
     }
 
-    fun testProjectService() {
-        val projectService = project.service<MyProjectService>()
-
-        assertNotSame(projectService.getRandomNumber(), projectService.getRandomNumber())
+    fun testParameterAnalysisService() {
+        val parameterAnalysisService = ParameterAnalysisService.getInstance(project)
+        assertNotNull(parameterAnalysisService)
+        
+        // 测试基本服务可用性
+        val json = parameterAnalysisService.generateDefaultParameterJson("test.namespace", "testStatement")
+        assertNotNull(json)
+    }
+    
+    fun testSqlGenerationService() {
+        val sqlGenerationService = SqlGenerationService.getInstance(project)
+        assertNotNull(sqlGenerationService)
     }
 
     override fun getTestDataPath() = "src/test/testData/rename"

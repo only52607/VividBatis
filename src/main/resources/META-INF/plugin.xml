@@ -5,11 +5,18 @@
     <vendor>only52607</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.xml</depends>
+    <depends>com.intellij.modules.java</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.only52607.vividbatis.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
+        <toolWindow factoryClass="com.github.only52607.vividbatis.toolWindow.SqlPreviewToolWindowFactory" 
+                    id="VividBatis" 
+                    displayName="VividBatis"
+                    anchor="right"/>
         <postStartupActivity implementation="com.github.only52607.vividbatis.startup.MyProjectActivity" />
+        <codeInsight.lineMarkerProvider language="XML" 
+                                        implementationClass="com.github.only52607.vividbatis.linemarker.MybatisStatementLineMarkerProvider"/>
     </extensions>
 </idea-plugin>

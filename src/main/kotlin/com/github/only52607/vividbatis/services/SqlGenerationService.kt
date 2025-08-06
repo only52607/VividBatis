@@ -1,0 +1,96 @@
+package com.github.only52607.vividbatis.services
+
+import com.github.only52607.vividbatis.util.MybatisXmlParser
+import com.github.only52607.vividbatis.util.MybatisSqlGenerator
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.project.Project
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+
+/**
+ * SQL 生成服务
+ */
+@Service
+class SqlGenerationService(private val project: Project) {
+    
+    companion object {
+        fun getInstance(project: Project): SqlGenerationService {
+            return project.getService(SqlGenerationService::class.java)
+        }
+    }
+    
+    private val mybatisXmlParser = MybatisXmlParser()
+    private val mybatisSqlGenerator = MybatisSqlGenerator()
+    private val gson = Gson()
+    
+    /**
+     * 生成 SQL 语句
+     */
+    fun generateSql(namespace: String, statementId: String, parameterJson: String): String {
+        // 解析参数 JSON
+        val parameters = parseParameterJson(parameterJson)
+        
+        // 获取 SQL 模板
+        val sqlTemplate = mybatisXmlParser.getSqlTemplate(project, namespace, statementId)
+            ?: throw RuntimeException("未找到语句: $namespace.$statementId")
+        
+        // 生成最终 SQL
+        return mybatisSqlGenerator.generateSql(sqlTemplate, parameters)
+    }
+    
+    private fun parseParameterJson(json: String): Map<String, Any> {
+        if (json.isBlank()) return emptyMap()
+        
+        return try {
+            val jsonElement = gson.fromJson(json, JsonElement::class.java)
+            flattenJsonObject(jsonElement)
+        } catch (e: Exception) {
+            throw RuntimeException("JSON 解析失败: ${e.message}", e)
+        }
+    }
+    
+    private fun flattenJsonObject(element: JsonElement): Map<String, Any> {
+        val result = mutableMapOf<String, Any>()
+        
+        when {
+            element.isJsonObject -> {
+                val jsonObject = element.asJsonObject
+                for ((key, value) in jsonObject.entrySet()) {
+                    when {
+                        value.isJsonPrimitive -> {
+                            val primitive = value.asJsonPrimitive
+                            result[key] = when {
+                                primitive.isString -> primitive.asString
+                                primitive.isNumber -> primitive.asNumber
+                                primitive.isBoolean -> primitive.asBoolean
+                                else -> primitive.asString
+                            }
+                        }
+                        value.isJsonObject -> {
+                            // 嵌套对象，使用点符号
+                            val nested = flattenJsonObject(value)
+                            for ((nestedKey, nestedValue) in nested) {
+                                result["$key.$nestedKey"] = nestedValue
+                            }
+                        }
+                        value.isJsonArray -> {
+                            // 数组处理
+                            result[key] = value.asJsonArray.map { flattenJsonObject(it) }
+                        }
+                    }
+                }
+            }
+            element.isJsonPrimitive -> {
+                val primitive = element.asJsonPrimitive
+                result["value"] = when {
+                    primitive.isString -> primitive.asString
+                    primitive.isNumber -> primitive.asNumber
+                    primitive.isBoolean -> primitive.asBoolean
+                    else -> primitive.asString
+                }
+            }
+        }
+        
+        return result
+    }
+} 
