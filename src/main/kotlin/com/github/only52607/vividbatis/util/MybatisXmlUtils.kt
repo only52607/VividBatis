@@ -9,6 +9,7 @@ import com.intellij.psi.xml.XmlTag
 
 object MybatisXmlUtils {
     val SUPPORTED_STATEMENTS = setOf("select", "insert", "update", "delete")
+    val SUPPORTED_DYNAMIC_TAGS = setOf("if", "choose", "when", "otherwise", "foreach", "where", "set", "include", "bind", "sql")
 
     fun findMapperXmlFile(project: Project, namespace: String): XmlFile? {
         val psiManager = PsiManager.getInstance(project)

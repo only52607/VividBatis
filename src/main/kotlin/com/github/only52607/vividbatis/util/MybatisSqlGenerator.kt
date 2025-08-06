@@ -21,6 +21,7 @@ class MybatisSqlGenerator {
     private fun processXmlTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
         return when (tag.name) {
             "include" -> processIncludeTag(tag, parameters, template)
+            "bind" -> processBindTag(tag, parameters, template)
             "if" -> processConditionalTag(tag, parameters, template)
             "foreach" -> processForeachTag(tag, parameters, template)
             "where" -> processWhereTag(tag, parameters, template)
@@ -114,16 +115,32 @@ class MybatisSqlGenerator {
         } ?: ""
     }
     
+    private fun processBindTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        return ""
+    }
+    
     private fun processChildTags(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
         val builder = StringBuilder()
+        val mutableParams = parameters.toMutableMap()
         
         tag.value.children.forEach { child ->
             when {
-                child is XmlTag -> builder.append(processXmlTag(child, parameters, template))
+                child is XmlTag -> {
+                    if (child.name == "bind") {
+                        val name = child.getAttributeValue("name")
+                        val value = child.getAttributeValue("value")
+                        if (name != null && value != null) {
+                            val bindValue = evaluateOgnlExpressionForValue(value, mutableParams)
+                            mutableParams[name] = bindValue
+                        }
+                    } else {
+                        builder.append(processXmlTag(child, mutableParams, template))
+                    }
+                }
                 else -> {
                     val text = child.text
                     if (text.isNotBlank()) {
-                        builder.append(replaceParameters(text, parameters))
+                        builder.append(replaceParameters(text, mutableParams))
                     }
                 }
             }
@@ -164,6 +181,18 @@ class MybatisSqlGenerator {
             }
         } catch (e: OgnlException) {
             false
+        }
+    }
+    
+    private fun evaluateOgnlExpressionForValue(expression: String, parameters: Map<String, Any>): Any {
+        return try {
+            val context = OgnlContext(null, null, null)
+            val root = HashMap<String, Any>()
+            parameters.forEach { (key, value) -> root[key] = value }
+            
+            Ognl.getValue(expression, context, root) ?: ""
+        } catch (e: OgnlException) {
+            throw RuntimeException("Error evaluating OGNL expression: $expression", e)
         }
     }
     
