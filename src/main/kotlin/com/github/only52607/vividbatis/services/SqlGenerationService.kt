@@ -44,7 +44,7 @@ class SqlGenerationService(private val project: Project) {
         when {
             element.isJsonObject -> {
                 val jsonObject = element.asJsonObject
-                for ((key, value) in jsonObject.entrySet()) {
+                jsonObject.entrySet().forEach { (key, value) ->
                     when {
                         value.isJsonPrimitive -> {
                             val primitive = value.asJsonPrimitive
@@ -57,7 +57,7 @@ class SqlGenerationService(private val project: Project) {
                         }
                         value.isJsonObject -> {
                             val nested = flattenJsonObject(value)
-                            for ((nestedKey, nestedValue) in nested) {
+                            nested.forEach { (nestedKey, nestedValue) ->
                                 result["$key.$nestedKey"] = nestedValue
                             }
                         }
