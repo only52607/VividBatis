@@ -2,9 +2,6 @@ package com.github.only52607.vividbatis.util
 
 import java.util.regex.Pattern
 
-/**
- * MyBatis SQL 生成器
- */
 class MybatisSqlGenerator {
     
     companion object {
@@ -12,22 +9,11 @@ class MybatisSqlGenerator {
         private val DOLLAR_PARAMETER_PATTERN = Pattern.compile("\\$\\{([^}]+)}")
     }
     
-    /**
-     * 生成 SQL 语句
-     */
     fun generateSql(template: SqlTemplate, parameters: Map<String, Any>): String {
         var sql = template.sqlContent
-        
-        // 处理 include 标签
         sql = processIncludes(sql, template, parameters)
-        
-        // 处理动态 SQL 标签
         sql = processDynamicTags(sql, parameters)
-        
-        // 替换参数
         sql = replaceParameters(sql, parameters)
-        
-        // 格式化 SQL
         return formatSql(sql)
     }
     
@@ -53,22 +39,11 @@ class MybatisSqlGenerator {
     
     private fun processDynamicTags(sql: String, parameters: Map<String, Any>): String {
         var processedSql = sql
-        
-        // 处理 if 标签
         processedSql = processIfTags(processedSql, parameters)
-        
-        // 处理 foreach 标签
         processedSql = processForeachTags(processedSql, parameters)
-        
-        // 处理 where 标签
         processedSql = processWhereTags(processedSql)
-        
-        // 处理 set 标签
         processedSql = processSetTags(processedSql)
-        
-        // 处理 choose/when/otherwise 标签
         processedSql = processChooseTags(processedSql, parameters)
-        
         return processedSql
     }
     
@@ -224,7 +199,6 @@ class MybatisSqlGenerator {
     }
     
     private fun evaluateCondition(condition: String, parameters: Map<String, Any>): Boolean {
-        // 简单的条件评估，实际应该更复杂
         when {
             condition.contains("!=") -> {
                 val parts = condition.split("!=").map { it.trim() }
@@ -251,7 +225,6 @@ class MybatisSqlGenerator {
                 return parameters[paramName] == null
             }
             else -> {
-                // 默认检查参数是否存在且不为空
                 val paramName = condition.trim()
                 val value = parameters[paramName]
                 return value != null && value.toString().isNotBlank()
@@ -289,7 +262,6 @@ class MybatisSqlGenerator {
     private fun replaceParameters(sql: String, parameters: Map<String, Any>): String {
         var result = sql
         
-        // 替换 #{} 参数
         val paramMatcher = PARAMETER_PATTERN.matcher(result)
         val paramResult = StringBuffer()
         
@@ -308,7 +280,6 @@ class MybatisSqlGenerator {
         paramMatcher.appendTail(paramResult)
         result = paramResult.toString()
         
-        // 替换 ${} 参数
         val dollarMatcher = DOLLAR_PARAMETER_PATTERN.matcher(result)
         val dollarResult = StringBuffer()
         

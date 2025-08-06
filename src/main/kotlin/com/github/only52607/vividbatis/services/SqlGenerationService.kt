@@ -7,9 +7,6 @@ import com.intellij.openapi.project.Project
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 
-/**
- * SQL 生成服务
- */
 @Service
 class SqlGenerationService(private val project: Project) {
     
@@ -23,18 +20,10 @@ class SqlGenerationService(private val project: Project) {
     private val mybatisSqlGenerator = MybatisSqlGenerator()
     private val gson = Gson()
     
-    /**
-     * 生成 SQL 语句
-     */
     fun generateSql(namespace: String, statementId: String, parameterJson: String): String {
-        // 解析参数 JSON
         val parameters = parseParameterJson(parameterJson)
-        
-        // 获取 SQL 模板
         val sqlTemplate = mybatisXmlParser.getSqlTemplate(project, namespace, statementId)
             ?: throw RuntimeException("未找到语句: $namespace.$statementId")
-        
-        // 生成最终 SQL
         return mybatisSqlGenerator.generateSql(sqlTemplate, parameters)
     }
     
@@ -67,14 +56,12 @@ class SqlGenerationService(private val project: Project) {
                             }
                         }
                         value.isJsonObject -> {
-                            // 嵌套对象，使用点符号
                             val nested = flattenJsonObject(value)
                             for ((nestedKey, nestedValue) in nested) {
                                 result["$key.$nestedKey"] = nestedValue
                             }
                         }
                         value.isJsonArray -> {
-                            // 数组处理
                             result[key] = value.asJsonArray.map { flattenJsonObject(it) }
                         }
                     }

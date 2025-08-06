@@ -1,20 +1,14 @@
 package com.github.only52607.vividbatis.util
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiType
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 
-/**
- * Java 类分析器
- */
 class JavaClassAnalyzer {
     
     private val processedClasses = mutableSetOf<String>()
     
-    /**
-     * 分析 Java 类并生成 JSON 对象
-     */
     fun analyzeClass(psiClass: PsiClass): JsonObject {
         processedClasses.clear()
         return analyzeClassInternal(psiClass)
@@ -24,13 +18,11 @@ class JavaClassAnalyzer {
         val jsonObject = JsonObject()
         val className = psiClass.qualifiedName ?: psiClass.name ?: return jsonObject
         
-        // 防止循环引用
         if (className in processedClasses) {
             return jsonObject
         }
         processedClasses.add(className)
         
-        // 分析字段
         val allFields = psiClass.allFields
         for (field in allFields) {
             if (field.hasModifierProperty("static") || 

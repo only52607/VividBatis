@@ -1,7 +1,6 @@
 package com.github.only52607.vividbatis
 
 import com.intellij.ide.highlighter.XmlFileType
-import com.intellij.openapi.components.service
 import com.intellij.psi.xml.XmlFile
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -17,7 +16,6 @@ class MyPluginTest : BasePlatformTestCase() {
         val xmlFile = assertInstanceOf(psiFile, XmlFile::class.java)
 
         assertFalse(PsiErrorElementUtil.hasErrors(project, xmlFile.virtualFile))
-
         assertNotNull(xmlFile.rootTag)
 
         xmlFile.rootTag?.let {
@@ -33,8 +31,6 @@ class MyPluginTest : BasePlatformTestCase() {
     fun testParameterAnalysisService() {
         val parameterAnalysisService = ParameterAnalysisService.getInstance(project)
         assertNotNull(parameterAnalysisService)
-        
-        // 测试基本服务可用性
         val json = parameterAnalysisService.generateDefaultParameterJson("test.namespace", "testStatement")
         assertNotNull(json)
     }

@@ -10,9 +10,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.xml.XmlTag
 import javax.swing.Icon
 
-/**
- * MyBatis SQL 语句行标记器
- */
 class MybatisStatementLineMarkerProvider : LineMarkerProvider {
     
     companion object {
@@ -22,13 +19,9 @@ class MybatisStatementLineMarkerProvider : LineMarkerProvider {
     
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
         if (element !is XmlTag) return null
-        
         val tagName = element.name
         if (tagName !in SUPPORTED_STATEMENTS) return null
-        
-        // 检查是否是 MyBatis mapper 文件
         if (!isMybatisMapperFile(element)) return null
-        
         val statementId = element.getAttributeValue("id") ?: return null
         
         return LineMarkerInfo(
@@ -36,9 +29,7 @@ class MybatisStatementLineMarkerProvider : LineMarkerProvider {
             element.textRange,
             SQL_ICON,
             { "预览 SQL: $statementId" },
-            { _, psiElement ->
-                handleIconClick(psiElement as XmlTag)
-            },
+            { _, psiElement -> handleIconClick(psiElement as XmlTag) },
             GutterIconRenderer.Alignment.LEFT,
             { "预览 SQL: $statementId" }
         )
@@ -59,8 +50,6 @@ class MybatisStatementLineMarkerProvider : LineMarkerProvider {
         val xmlFilePath = xmlTag.containingFile.virtualFile?.path ?: return
         
         val event = SqlStatementSelectedEvent(namespace, statementId, statementType, xmlFilePath)
-        
-        // 发布事件
         val project = xmlTag.project
         project.messageBus.syncPublisher(SqlStatementSelectedListener.TOPIC).onStatementSelected(event)
     }

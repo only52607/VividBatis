@@ -7,24 +7,14 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.xml.XmlFile
 import com.intellij.psi.xml.XmlTag
 
-/**
- * MyBatis XML 解析器
- */
 class MybatisXmlParser {
     
-    /**
-     * 获取参数类型
-     */
     fun getParameterType(project: Project, namespace: String, statementId: String): String? {
         val xmlFile = findMapperXmlFile(project, namespace) ?: return null
         val statementTag = findStatementTag(xmlFile, statementId) ?: return null
-        
         return statementTag.getAttributeValue("parameterType")
     }
     
-    /**
-     * 获取 SQL 模板
-     */
     fun getSqlTemplate(project: Project, namespace: String, statementId: String): SqlTemplate? {
         val xmlFile = findMapperXmlFile(project, namespace) ?: return null
         val statementTag = findStatementTag(xmlFile, statementId) ?: return null
@@ -51,7 +41,6 @@ class MybatisXmlParser {
                 return psiFile
             }
         }
-        
         return null
     }
     
@@ -64,7 +53,6 @@ class MybatisXmlParser {
                 return child
             }
         }
-        
         return null
     }
     
@@ -82,13 +70,9 @@ class MybatisXmlParser {
                 includes.add(refId)
             }
         }
-        
         return includes
     }
     
-    /**
-     * 解析 SQL 片段
-     */
     fun getSqlFragment(project: Project, namespace: String, fragmentId: String): String? {
         val xmlFile = findMapperXmlFile(project, namespace) ?: return null
         val rootTag = xmlFile.rootTag ?: return null
@@ -98,14 +82,10 @@ class MybatisXmlParser {
                 return child.value.text.trim()
             }
         }
-        
         return null
     }
 }
 
-/**
- * SQL 模板数据类
- */
 data class SqlTemplate(
     val namespace: String,
     val statementId: String,

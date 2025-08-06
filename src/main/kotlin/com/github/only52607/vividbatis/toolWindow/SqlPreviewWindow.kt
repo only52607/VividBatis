@@ -21,9 +21,6 @@ import java.awt.Insets
 import javax.swing.JButton
 import javax.swing.JPanel
 
-/**
- * SQL 预览窗口
- */
 class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListener {
     
     private val parameterAnalysisService = ParameterAnalysisService.getInstance(project)
@@ -39,18 +36,14 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
     init {
         setupUI()
         setupEventHandlers()
-        
-        // 订阅事件
         project.messageBus.connect().subscribe(SqlStatementSelectedListener.TOPIC, this)
     }
     
     private fun setupUI() {
         parameterEditor.preferredSize = Dimension(400, 200)
         parameterEditor.isViewer = false
-        
         sqlEditor.preferredSize = Dimension(400, 200)
         sqlEditor.isViewer = true
-        
         generateButton.isEnabled = false
     }
     
@@ -78,24 +71,16 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
     
     fun getContent(): JPanel {
         val mainPanel = JBPanel<JBPanel<*>>(BorderLayout())
-        
-        // 顶部信息面板
         val infoPanel = createInfoPanel()
         mainPanel.add(infoPanel, BorderLayout.NORTH)
         
-        // 中间分割面板
         val splitter = JBSplitter(true, 0.5f)
-        
-        // 参数编辑器面板
         val parameterPanel = createParameterPanel()
         splitter.firstComponent = parameterPanel
-        
-        // SQL 结果面板
         val sqlPanel = createSqlPanel()
         splitter.secondComponent = sqlPanel
         
         mainPanel.add(splitter, BorderLayout.CENTER)
-        
         return mainPanel
     }
     
@@ -132,16 +117,12 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
     }
     
     override fun onStatementSelected(event: SqlStatementSelectedEvent) {
-        // 激活工具窗口（避免通过消息总线再次发布事件）
         val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("VividBatis")
         toolWindow?.activate(null)
         
         currentEvent = event
-        
-        // 更新界面信息
         statementInfoLabel.text = "命名空间: ${event.namespace}, 语句ID: ${event.statementId}, 类型: ${event.statementType}"
         
-        // 分析参数类型并生成默认 JSON
         try {
             val defaultJson = parameterAnalysisService.generateDefaultParameterJson(
                 event.namespace,
@@ -154,7 +135,6 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
             generateButton.isEnabled = false
         }
         
-        // 清空 SQL 结果
         sqlEditor.text = ""
     }
 } 

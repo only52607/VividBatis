@@ -15,7 +15,6 @@
                     id="VividBatis" 
                     displayName="VividBatis"
                     anchor="right"/>
-        <postStartupActivity implementation="com.github.only52607.vividbatis.startup.MyProjectActivity" />
         <codeInsight.lineMarkerProvider language="XML" 
                                         implementationClass="com.github.only52607.vividbatis.linemarker.MybatisStatementLineMarkerProvider"/>
     </extensions>

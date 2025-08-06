@@ -9,9 +9,6 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.search.GlobalSearchScope
 
-/**
- * 参数分析服务
- */
 @Service
 class ParameterAnalysisService(private val project: Project) {
     
@@ -25,9 +22,6 @@ class ParameterAnalysisService(private val project: Project) {
     private val javaClassAnalyzer = JavaClassAnalyzer()
     private val gson = GsonBuilder().setPrettyPrinting().create()
     
-    /**
-     * 生成默认参数 JSON
-     */
     fun generateDefaultParameterJson(namespace: String, statementId: String): String {
         val parameterType = getParameterType(namespace, statementId)
         
