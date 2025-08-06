@@ -1,201 +1,219 @@
 package com.github.only52607.vividbatis.util
 
-import java.util.regex.Pattern
+import com.intellij.psi.xml.XmlTag
 
 class MybatisSqlGenerator {
-    
-    companion object {
-        private val PARAMETER_PATTERN = Pattern.compile("#\\{([^}]+)}")
-        private val DOLLAR_PARAMETER_PATTERN = Pattern.compile("\\$\\{([^}]+)}")
-    }
-    
+
     fun generateSql(template: SqlTemplate, parameters: Map<String, Any>): String {
-        var sql = template.sqlContent
-        sql = processIncludes(sql, template, parameters)
-        sql = processDynamicTags(sql, parameters)
-        sql = replaceParameters(sql, parameters)
+        val statementTag = findStatementTag(template)
+        val sql = processXmlTag(statementTag, parameters, template)
         return formatSql(sql)
     }
     
-    private fun processIncludes(sql: String, template: SqlTemplate, parameters: Map<String, Any>): String {
-        var processedSql = sql
+    private fun findStatementTag(template: SqlTemplate): XmlTag {
+        val rootTag = template.mapperFile.rootTag!!
+        for (child in rootTag.subTags) {
+            if (child.name in setOf("select", "insert", "update", "delete") &&
+                child.getAttributeValue("id") == template.statementId) {
+                return child
+            }
+        }
+        throw RuntimeException("Statement tag not found: ${template.statementId}")
+    }
+    
+    private fun processXmlTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        return when (tag.name) {
+            "include" -> processIncludeTag(tag, parameters, template)
+            "if" -> processIfTag(tag, parameters, template)
+            "foreach" -> processForeachTag(tag, parameters, template)
+            "where" -> processWhereTag(tag, parameters, template)
+            "set" -> processSetTag(tag, parameters, template)
+            "choose" -> processChooseTag(tag, parameters, template)
+            "when" -> processWhenTag(tag, parameters, template)
+            "otherwise" -> processOtherwiseTag(tag, parameters, template)
+            "sql" -> processRegularTag(tag, parameters, template)
+            else -> processRegularTag(tag, parameters, template)
+        }
+    }
+    
+    private fun processIncludeTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        val refid = tag.getAttributeValue("refid") ?: return ""
         
-        for (includeId in template.includes) {
-            val mybatisXmlParser = MybatisXmlParser()
-            val fragmentContent = mybatisXmlParser.getSqlFragment(
-                template.mapperFile.project,
-                template.namespace,
-                includeId
-            )
-            
-            if (fragmentContent != null) {
-                val includePattern = Pattern.compile("<include\\s+refid\\s*=\\s*[\"']$includeId[\"']\\s*/>")
-                processedSql = includePattern.matcher(processedSql).replaceAll(fragmentContent)
+        val includeParameters = mutableMapOf<String, String>()
+        for (property in tag.findSubTags("property")) {
+            val name = property.getAttributeValue("name")
+            val value = property.getAttributeValue("value")
+            if (name != null && value != null) {
+                includeParameters[name] = value
             }
         }
         
-        return processedSql
-    }
-    
-    private fun processDynamicTags(sql: String, parameters: Map<String, Any>): String {
-        var processedSql = sql
-        processedSql = processIfTags(processedSql, parameters)
-        processedSql = processForeachTags(processedSql, parameters)
-        processedSql = processWhereTags(processedSql)
-        processedSql = processSetTags(processedSql)
-        processedSql = processChooseTags(processedSql, parameters)
-        return processedSql
-    }
-    
-    private fun processIfTags(sql: String, parameters: Map<String, Any>): String {
-        val ifPattern = Pattern.compile("<if\\s+test\\s*=\\s*[\"']([^\"']+)[\"']\\s*>(.*?)</if>", Pattern.DOTALL)
-        val matcher = ifPattern.matcher(sql)
-        val result = StringBuffer()
+        val resolvedRefid = resolveVariables(refid, parameters, includeParameters)
+        val sqlFragment = findSqlFragment(template, resolvedRefid)
         
-        while (matcher.find()) {
-            val condition = matcher.group(1)
-            val content = matcher.group(2)
-            
-            val shouldInclude = evaluateCondition(condition, parameters)
-            val replacement = if (shouldInclude) content else ""
-            matcher.appendReplacement(result, replacement)
-        }
-        matcher.appendTail(result)
-        
-        return result.toString()
-    }
-    
-    private fun processForeachTags(sql: String, parameters: Map<String, Any>): String {
-        val foreachPattern = Pattern.compile(
-            "<foreach\\s+collection\\s*=\\s*[\"']([^\"']+)[\"']\\s+" +
-            "item\\s*=\\s*[\"']([^\"']+)[\"']\\s*" +
-            "(?:index\\s*=\\s*[\"']([^\"']+)[\"']\\s*)?" +
-            "(?:open\\s*=\\s*[\"']([^\"']*)[\"']\\s*)?" +
-            "(?:close\\s*=\\s*[\"']([^\"']*)[\"']\\s*)?" +
-            "(?:separator\\s*=\\s*[\"']([^\"']*)[\"']\\s*)?>" +
-            "(.*?)</foreach>", 
-            Pattern.DOTALL
-        )
-        
-        val matcher = foreachPattern.matcher(sql)
-        val result = StringBuffer()
-        
-        while (matcher.find()) {
-            val collection = matcher.group(1)
-            val item = matcher.group(2)
-            val index = matcher.group(3) ?: "index"
-            val open = matcher.group(4) ?: ""
-            val close = matcher.group(5) ?: ""
-            val separator = matcher.group(6) ?: ","
-            val content = matcher.group(7)
-            
-            val collectionValue = parameters[collection]
-            val replacement = if (collectionValue is List<*>) {
-                val items = mutableListOf<String>()
-                collectionValue.forEachIndexed { idx, value ->
-                    val itemParams = parameters.toMutableMap()
-                    itemParams[item] = value ?: ""
-                    itemParams[index] = idx
-                    items.add(replaceParameters(content, itemParams))
-                }
-                open + items.joinToString(separator) + close
-            } else {
-                ""
+        if (sqlFragment != null) {
+            val mergedParameters = parameters.toMutableMap()
+            for ((key, value) in includeParameters) {
+                mergedParameters[key] = value
             }
-            
-            matcher.appendReplacement(result, replacement)
-        }
-        matcher.appendTail(result)
-        
-        return result.toString()
-    }
-    
-    private fun processWhereTags(sql: String): String {
-        val wherePattern = Pattern.compile("<where\\s*>(.*?)</where>", Pattern.DOTALL)
-        val matcher = wherePattern.matcher(sql)
-        val result = StringBuffer()
-        
-        while (matcher.find()) {
-            val content = matcher.group(1).trim()
-            val processedContent = content
-                .replaceFirst("^\\s*AND\\s+".toRegex(RegexOption.IGNORE_CASE), "")
-                .replaceFirst("^\\s*OR\\s+".toRegex(RegexOption.IGNORE_CASE), "")
-            
-            val replacement = if (processedContent.isNotBlank()) {
-                "WHERE $processedContent"
-            } else {
-                ""
-            }
-            
-            matcher.appendReplacement(result, replacement)
-        }
-        matcher.appendTail(result)
-        
-        return result.toString()
-    }
-    
-    private fun processSetTags(sql: String): String {
-        val setPattern = Pattern.compile("<set\\s*>(.*?)</set>", Pattern.DOTALL)
-        val matcher = setPattern.matcher(sql)
-        val result = StringBuffer()
-        
-        while (matcher.find()) {
-            val content = matcher.group(1).trim()
-            val processedContent = content.removeSuffix(",")
-            
-            val replacement = if (processedContent.isNotBlank()) {
-                "SET $processedContent"
-            } else {
-                ""
-            }
-            
-            matcher.appendReplacement(result, replacement)
-        }
-        matcher.appendTail(result)
-        
-        return result.toString()
-    }
-    
-    private fun processChooseTags(sql: String, parameters: Map<String, Any>): String {
-        val choosePattern = Pattern.compile(
-            "<choose\\s*>(.*?)</choose>", 
-            Pattern.DOTALL
-        )
-        
-        val matcher = choosePattern.matcher(sql)
-        val result = StringBuffer()
-        
-        while (matcher.find()) {
-            val chooseContent = matcher.group(1)
-            val replacement = processChooseContent(chooseContent, parameters)
-            matcher.appendReplacement(result, replacement)
-        }
-        matcher.appendTail(result)
-        
-        return result.toString()
-    }
-    
-    private fun processChooseContent(content: String, parameters: Map<String, Any>): String {
-        val whenPattern = Pattern.compile("<when\\s+test\\s*=\\s*[\"']([^\"']+)[\"']\\s*>(.*?)</when>", Pattern.DOTALL)
-        val otherwisePattern = Pattern.compile("<otherwise\\s*>(.*?)</otherwise>", Pattern.DOTALL)
-        
-        val whenMatcher = whenPattern.matcher(content)
-        
-        while (whenMatcher.find()) {
-            val condition = whenMatcher.group(1)
-            val whenContent = whenMatcher.group(2)
-            
-            if (evaluateCondition(condition, parameters)) {
-                return whenContent
-            }
-        }
-        
-        val otherwiseMatcher = otherwisePattern.matcher(content)
-        if (otherwiseMatcher.find()) {
-            return otherwiseMatcher.group(1)
+            return processXmlTag(sqlFragment, mergedParameters, template)
         }
         
         return ""
+    }
+    
+    private fun processIfTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        val test = tag.getAttributeValue("test") ?: return ""
+        if (evaluateCondition(test, parameters)) {
+            return processChildTags(tag, parameters, template)
+        }
+        return ""
+    }
+    
+    private fun processForeachTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        val collection = tag.getAttributeValue("collection") ?: return ""
+        val item = tag.getAttributeValue("item") ?: "item"
+        val index = tag.getAttributeValue("index") ?: "index"
+        val open = tag.getAttributeValue("open") ?: ""
+        val close = tag.getAttributeValue("close") ?: ""
+        val separator = tag.getAttributeValue("separator") ?: ","
+        
+        val collectionValue = parameters[collection]
+        if (collectionValue is List<*>) {
+            val items = mutableListOf<String>()
+            collectionValue.forEachIndexed { idx, value ->
+                val itemParams = parameters.toMutableMap()
+                itemParams[item] = value ?: ""
+                itemParams[index] = idx
+                items.add(processChildTags(tag, itemParams, template))
+            }
+            return open + items.joinToString(separator) + close
+        }
+        
+        return ""
+    }
+    
+    private fun processWhereTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        val content = processChildTags(tag, parameters, template).trim()
+        if (content.isBlank()) return ""
+        
+        val processedContent = content
+            .replaceFirst("^\\s*AND\\s+".toRegex(RegexOption.IGNORE_CASE), "")
+            .replaceFirst("^\\s*OR\\s+".toRegex(RegexOption.IGNORE_CASE), "")
+        
+        return if (processedContent.isNotBlank()) "WHERE $processedContent" else ""
+    }
+    
+    private fun processSetTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        val content = processChildTags(tag, parameters, template).trim()
+        if (content.isBlank()) return ""
+        
+        val processedContent = content.removeSuffix(",").trim()
+        return if (processedContent.isNotBlank()) "SET $processedContent" else ""
+    }
+    
+    private fun processChooseTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        for (child in tag.subTags) {
+            when (child.name) {
+                "when" -> {
+                    val test = child.getAttributeValue("test")
+                    if (test != null && evaluateCondition(test, parameters)) {
+                        return processChildTags(child, parameters, template)
+                    }
+                }
+            }
+        }
+        
+        for (child in tag.subTags) {
+            if (child.name == "otherwise") {
+                return processChildTags(child, parameters, template)
+            }
+        }
+        
+        return ""
+    }
+    
+    private fun processWhenTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        val test = tag.getAttributeValue("test") ?: return ""
+        if (evaluateCondition(test, parameters)) {
+            return processChildTags(tag, parameters, template)
+        }
+        return ""
+    }
+    
+    private fun processOtherwiseTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        return processChildTags(tag, parameters, template)
+    }
+    
+    private fun processRegularTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        val builder = StringBuilder()
+        
+        // 处理XML值内容（包含文本和子标签，保持原始顺序）
+        for (child in tag.value.children) {
+            when {
+                child is XmlTag -> {
+                    builder.append(processXmlTag(child, parameters, template))
+                }
+                else -> {
+                    val text = child.text
+                    if (text.isNotBlank()) {
+                        builder.append(replaceParameters(text, parameters))
+                    }
+                }
+            }
+        }
+        
+        return builder.toString()
+    }
+    
+    private fun processChildTags(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        val builder = StringBuilder()
+        
+        // 处理XML值内容（包含文本和子标签，保持原始顺序）
+        for (child in tag.value.children) {
+            when {
+                child is XmlTag -> {
+                    builder.append(processXmlTag(child, parameters, template))
+                }
+                else -> {
+                    val text = child.text
+                    if (text.isNotBlank()) {
+                        builder.append(replaceParameters(text, parameters))
+                    }
+                }
+            }
+        }
+        
+        return builder.toString()
+    }
+    
+    private fun findSqlFragment(template: SqlTemplate, fragmentId: String): XmlTag? {
+        val rootTag = template.mapperFile.rootTag ?: return null
+        
+        for (child in rootTag.subTags) {
+            if (child.name == "sql" && child.getAttributeValue("id") == fragmentId) {
+                return child
+            }
+        }
+        
+        return null
+    }
+    
+    private fun resolveVariables(text: String, parameters: Map<String, Any>, includeParameters: Map<String, String>): String {
+        var result = text
+        
+        val pattern = "\\$\\{([^}]+)}".toRegex()
+        val matches = pattern.findAll(text).toList()
+        
+        for (match in matches) {
+            val variableName = match.groupValues[1]
+            val value = includeParameters[variableName] 
+                ?: parameters[variableName]?.toString() 
+                ?: match.value
+            result = result.replace(match.value, value)
+        }
+        
+        return result
     }
     
     private fun evaluateCondition(condition: String, parameters: Map<String, Any>): Boolean {
@@ -259,38 +277,29 @@ class MybatisSqlGenerator {
         }
     }
     
-    private fun replaceParameters(sql: String, parameters: Map<String, Any>): String {
-        var result = sql
+    private fun replaceParameters(text: String, parameters: Map<String, Any>): String {
+        var result = text
         
-        val paramMatcher = PARAMETER_PATTERN.matcher(result)
-        val paramResult = StringBuffer()
-        
-        while (paramMatcher.find()) {
-            val paramName = paramMatcher.group(1)
+        val paramPattern = "#\\{([^}]+)}".toRegex()
+        result = paramPattern.replace(result) { match ->
+            val paramName = match.groupValues[1]
             val value = parameters[paramName]
-            val replacement = when (value) {
+            when (value) {
                 is String -> "'$value'"
                 is Number -> value.toString()
                 is Boolean -> value.toString()
                 null -> "NULL"
                 else -> "'$value'"
             }
-            paramMatcher.appendReplacement(paramResult, replacement)
         }
-        paramMatcher.appendTail(paramResult)
-        result = paramResult.toString()
         
-        val dollarMatcher = DOLLAR_PARAMETER_PATTERN.matcher(result)
-        val dollarResult = StringBuffer()
-        
-        while (dollarMatcher.find()) {
-            val paramName = dollarMatcher.group(1)
-            val value = parameters[paramName]?.toString() ?: ""
-            dollarMatcher.appendReplacement(dollarResult, value)
+        val dollarPattern = "\\$\\{([^}]+)}".toRegex()
+        result = dollarPattern.replace(result) { match ->
+            val paramName = match.groupValues[1]
+            parameters[paramName]?.toString() ?: ""
         }
-        dollarMatcher.appendTail(dollarResult)
         
-        return dollarResult.toString()
+        return result
     }
     
     private fun formatSql(sql: String): String {

@@ -23,8 +23,6 @@ class MybatisXmlParser {
             namespace = namespace,
             statementId = statementId,
             statementType = statementTag.name,
-            sqlContent = extractSqlContent(statementTag),
-            includes = extractIncludes(statementTag),
             mapperFile = xmlFile
         )
     }
@@ -55,42 +53,11 @@ class MybatisXmlParser {
         }
         return null
     }
-    
-    private fun extractSqlContent(statementTag: XmlTag): String {
-        return statementTag.value.text.trim()
-    }
-    
-    private fun extractIncludes(statementTag: XmlTag): List<String> {
-        val includes = mutableListOf<String>()
-        val includeElements = statementTag.findSubTags("include")
-        
-        for (includeElement in includeElements) {
-            val refId = includeElement.getAttributeValue("refid")
-            if (refId != null) {
-                includes.add(refId)
-            }
-        }
-        return includes
-    }
-    
-    fun getSqlFragment(project: Project, namespace: String, fragmentId: String): String? {
-        val xmlFile = findMapperXmlFile(project, namespace) ?: return null
-        val rootTag = xmlFile.rootTag ?: return null
-        
-        for (child in rootTag.subTags) {
-            if (child.name == "sql" && child.getAttributeValue("id") == fragmentId) {
-                return child.value.text.trim()
-            }
-        }
-        return null
-    }
 }
 
 data class SqlTemplate(
     val namespace: String,
     val statementId: String,
     val statementType: String,
-    val sqlContent: String,
-    val includes: List<String>,
     val mapperFile: XmlFile
 ) 
