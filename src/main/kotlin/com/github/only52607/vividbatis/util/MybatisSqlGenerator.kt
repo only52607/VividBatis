@@ -1,6 +1,9 @@
 package com.github.only52607.vividbatis.util
 
 import com.intellij.psi.xml.XmlTag
+import ognl.Ognl
+import ognl.OgnlContext
+import ognl.OgnlException
 
 class MybatisSqlGenerator {
 
@@ -53,7 +56,7 @@ class MybatisSqlGenerator {
     
     private fun processConditionalTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
         val test = tag.getAttributeValue("test") ?: return ""
-        return if (evaluateCondition(test, parameters)) {
+        return if (evaluateOgnlExpression(test, parameters)) {
             processChildTags(tag, parameters, template)
         } else ""
     }
@@ -100,7 +103,7 @@ class MybatisSqlGenerator {
         tag.subTags.forEach { child ->
             if (child.name == "when") {
                 val test = child.getAttributeValue("test")
-                if (test != null && evaluateCondition(test, parameters)) {
+                if (test != null && evaluateOgnlExpression(test, parameters)) {
                     return processChildTags(child, parameters, template)
                 }
             }
@@ -144,55 +147,23 @@ class MybatisSqlGenerator {
         return result
     }
     
-    private fun evaluateCondition(condition: String, parameters: Map<String, Any>): Boolean {
-        return when {
-            condition.contains("!=") -> {
-                val parts = condition.split("!=").map { it.trim() }
-                if (parts.size == 2) {
-                    getParameterValue(parts[0], parameters) != parseValue(parts[1])
-                } else false
+    private fun evaluateOgnlExpression(expression: String, parameters: Map<String, Any>): Boolean {
+        return try {
+            val context = OgnlContext(null, null, null)
+            val root = HashMap<String, Any>()
+            parameters.forEach { (key, value) -> root[key] = value }
+            
+            val result = Ognl.getValue(expression, context, root)
+            
+            when (result) {
+                is Boolean -> result
+                is Number -> result.toDouble() != 0.0
+                is String -> result.isNotEmpty()
+                null -> false
+                else -> true
             }
-            condition.contains("==") -> {
-                val parts = condition.split("==").map { it.trim() }
-                if (parts.size == 2) {
-                    getParameterValue(parts[0], parameters) == parseValue(parts[1])
-                } else false
-            }
-            condition.contains(" != null") -> {
-                val paramName = condition.replace(" != null", "").trim()
-                parameters[paramName] != null
-            }
-            condition.contains(" == null") -> {
-                val paramName = condition.replace(" == null", "").trim()
-                parameters[paramName] == null
-            }
-            else -> {
-                val value = parameters[condition.trim()]
-                value != null && value.toString().isNotBlank()
-            }
-        }
-    }
-    
-    private fun getParameterValue(expression: String, parameters: Map<String, Any>): Any? {
-        return when {
-            expression.startsWith("'") && expression.endsWith("'") -> 
-                expression.substring(1, expression.length - 1)
-            expression.startsWith("\"") && expression.endsWith("\"") -> 
-                expression.substring(1, expression.length - 1)
-            else -> parameters[expression]
-        }
-    }
-    
-    private fun parseValue(value: String): Any? {
-        return when {
-            value == "null" -> null
-            value.startsWith("'") && value.endsWith("'") -> value.substring(1, value.length - 1)
-            value.startsWith("\"") && value.endsWith("\"") -> value.substring(1, value.length - 1)
-            value.toIntOrNull() != null -> value.toInt()
-            value.toDoubleOrNull() != null -> value.toDouble()
-            value == "true" -> true
-            value == "false" -> false
-            else -> value
+        } catch (e: OgnlException) {
+            false
         }
     }
     
