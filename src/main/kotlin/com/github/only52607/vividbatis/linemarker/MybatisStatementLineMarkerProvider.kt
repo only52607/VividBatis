@@ -2,7 +2,9 @@ package com.github.only52607.vividbatis.linemarker
 
 import com.github.only52607.vividbatis.message.SqlStatementSelectedEvent
 import com.github.only52607.vividbatis.message.SqlStatementSelectedListener
-import com.github.only52607.vividbatis.util.MybatisXmlUtils
+import com.github.only52607.vividbatis.util.SUPPORTED_STATEMENTS
+import com.github.only52607.vividbatis.util.findMapperNamespace
+import com.github.only52607.vividbatis.util.isInMybatisMapperFile
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.icons.AllIcons
@@ -19,8 +21,8 @@ class MybatisStatementLineMarkerProvider : LineMarkerProvider {
     
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
         if (element !is XmlTag) return null
-        if (element.name !in MybatisXmlUtils.SUPPORTED_STATEMENTS) return null
-        if (!MybatisXmlUtils.isMybatisTag(element)) return null
+        if (element.name !in SUPPORTED_STATEMENTS) return null
+        if (!element.isInMybatisMapperFile()) return null
         val statementId = element.getAttributeValue("id") ?: return null
         
         return LineMarkerInfo(
@@ -35,7 +37,7 @@ class MybatisStatementLineMarkerProvider : LineMarkerProvider {
     }
     
     private fun handleIconClick(xmlTag: XmlTag) {
-        val namespace = MybatisXmlUtils.getMapperNamespace(xmlTag) ?: return
+        val namespace = xmlTag.findMapperNamespace() ?: return
         val statementId = xmlTag.getAttributeValue("id") ?: return
         val statementType = xmlTag.name
         val xmlFilePath = xmlTag.containingFile.virtualFile?.path ?: return

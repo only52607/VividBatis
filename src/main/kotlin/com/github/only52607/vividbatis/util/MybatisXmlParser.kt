@@ -7,14 +7,14 @@ import com.intellij.psi.xml.XmlTag
 class MybatisXmlParser {
     
     fun getParameterType(project: Project, namespace: String, statementId: String): String? {
-        val xmlFile = MybatisXmlUtils.findMapperXmlFile(project, namespace) ?: return null
-        val statementTag = MybatisXmlUtils.findStatementTag(xmlFile, statementId) ?: return null
+        val xmlFile = project.findMybatisMapperXml(namespace) ?: return null
+        val statementTag = xmlFile.findMybatisStatementById(statementId) ?: return null
         return statementTag.getAttributeValue("parameterType")
     }
     
     fun getSqlTemplate(project: Project, namespace: String, statementId: String): SqlTemplate? {
-        val xmlFile = MybatisXmlUtils.findMapperXmlFile(project, namespace) ?: return null
-        val statementTag = MybatisXmlUtils.findStatementTag(xmlFile, statementId) ?: return null
+        val xmlFile = project.findMybatisMapperXml(namespace) ?: return null
+        val statementTag = xmlFile.findMybatisStatementById(statementId) ?: return null
         
         return SqlTemplate(
             namespace = namespace,

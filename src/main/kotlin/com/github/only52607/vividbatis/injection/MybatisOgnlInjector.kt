@@ -1,7 +1,7 @@
 package com.github.only52607.vividbatis.injection
 
 import com.github.only52607.vividbatis.language.OgnlLanguage
-import com.github.only52607.vividbatis.util.MybatisXmlUtils
+import com.github.only52607.vividbatis.util.isInMybatisMapperFile
 import com.intellij.lang.injection.MultiHostInjector
 import com.intellij.lang.injection.MultiHostRegistrar
 import com.intellij.openapi.util.TextRange
@@ -42,7 +42,7 @@ class MybatisOgnlInjector : MultiHostInjector {
         val xmlTag = xmlAttribute.parent as? XmlTag ?: return
         
         // Check if this is a MyBatis mapper file
-        if (!MybatisXmlUtils.isMybatisTag(xmlTag)) return
+        if (!xmlTag.isInMybatisMapperFile()) return
         
         // Check if the tag supports OGNL and the attribute is an OGNL attribute
         if (xmlTag.name in OGNL_SUPPORTING_TAGS && attributeName in OGNL_ATTRIBUTES) {

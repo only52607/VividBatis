@@ -14,7 +14,7 @@ class MybatisSqlGenerator {
     }
     
     private fun findStatementTag(template: SqlTemplate): XmlTag {
-        return MybatisXmlUtils.findStatementTag(template.mapperFile, template.statementId)
+        return template.mapperFile.findMybatisStatementById(template.statementId)
             ?: throw RuntimeException("Statement tag not found: ${template.statementId}")
     }
     
@@ -47,7 +47,7 @@ class MybatisSqlGenerator {
         }
         
         val resolvedRefId = resolveVariables(refId, parameters, includeParameters)
-        val sqlFragment = MybatisXmlUtils.findSqlFragmentByRefId(template.project, template.mapperFile, resolvedRefId)
+        val sqlFragment = template.mapperFile.findSqlFragmentByRefId(resolvedRefId)
         
         return if (sqlFragment != null) {
             val mergedParameters = parameters.toMutableMap()
