@@ -7,8 +7,10 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.PsiErrorElementUtil
 import com.github.only52607.vividbatis.services.ParameterAnalysisService
 import com.github.only52607.vividbatis.services.SqlGenerationService
-import com.github.only52607.vividbatis.util.MybatisXmlParser
 import com.github.only52607.vividbatis.util.MybatisSqlGenerator
+import com.github.only52607.vividbatis.util.SqlTemplate
+import com.github.only52607.vividbatis.util.findMybatisMapperXml
+import com.github.only52607.vividbatis.util.findMybatisStatementById
 import java.io.File
 
 @TestDataPath("\$CONTENT_ROOT/src/test/testData")
@@ -52,8 +54,16 @@ class MyPluginTest : BasePlatformTestCase() {
         val commonFragmentsFile = myFixture.configureByText("test-common-fragments.xml", commonFragmentsContent) as XmlFile
         
         // 测试跨文件include
-        val parser = MybatisXmlParser()
-        val template = parser.getSqlTemplate(project, "com.example.TestMapper", "selectUsersWithLocalInclude")
+        val template = project.findMybatisMapperXml("com.example.TestMapper")?.let { xml ->
+            val tag = xml.findMybatisStatementById("selectUsersWithLocalInclude") ?: return@let null
+            SqlTemplate(
+                namespace = "com.example.TestMapper",
+                statementId = "selectUsersWithLocalInclude",
+                statementType = tag.name,
+                mapperFile = xml,
+                project = project
+            )
+        }
         
         assertNotNull("Should find SQL template", template)
         

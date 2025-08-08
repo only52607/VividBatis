@@ -1,8 +1,9 @@
 package com.github.only52607.vividbatis.services
 
 import com.github.only52607.vividbatis.util.JavaClassAnalyzer
-import com.github.only52607.vividbatis.util.MybatisXmlParser
 import com.github.only52607.vividbatis.util.TypeUtils
+import com.github.only52607.vividbatis.util.findMybatisMapperXml
+import com.github.only52607.vividbatis.util.findMybatisStatementById
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
@@ -19,12 +20,13 @@ class ParameterAnalysisService(private val project: Project) {
         }
     }
     
-    private val mybatisXmlParser = MybatisXmlParser()
     private val javaClassAnalyzer = JavaClassAnalyzer()
     private val gson = GsonBuilder().setPrettyPrinting().create()
     
     fun generateDefaultParameterJson(namespace: String, statementId: String): String {
-        val parameterType = mybatisXmlParser.getParameterType(project, namespace, statementId)
+        val parameterType = project.findMybatisMapperXml(namespace)
+            ?.findMybatisStatementById(statementId)
+            ?.getAttributeValue("parameterType")
         
         return when {
             parameterType == null -> "{}"

@@ -1,7 +1,9 @@
 package com.github.only52607.vividbatis.services
 
-import com.github.only52607.vividbatis.util.MybatisXmlParser
 import com.github.only52607.vividbatis.util.MybatisSqlGenerator
+import com.github.only52607.vividbatis.util.SqlTemplate
+import com.github.only52607.vividbatis.util.findMybatisMapperXml
+import com.github.only52607.vividbatis.util.findMybatisStatementById
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.google.gson.Gson
@@ -16,15 +18,26 @@ class SqlGenerationService(private val project: Project) {
         }
     }
     
-    private val mybatisXmlParser = MybatisXmlParser()
     private val mybatisSqlGenerator = MybatisSqlGenerator()
     private val gson = Gson()
     
     fun generateSql(namespace: String, statementId: String, parameterJson: String): String {
         val parameters = parseParameterJson(parameterJson)
-        val sqlTemplate = mybatisXmlParser.getSqlTemplate(project, namespace, statementId)
+        val sqlTemplate = buildSqlTemplate(namespace, statementId)
             ?: throw RuntimeException("未找到语句: $namespace.$statementId")
         return mybatisSqlGenerator.generateSql(sqlTemplate, parameters)
+    }
+
+    private fun buildSqlTemplate(namespace: String, statementId: String): SqlTemplate? {
+        val xmlFile = project.findMybatisMapperXml(namespace) ?: return null
+        val statementTag = xmlFile.findMybatisStatementById(statementId) ?: return null
+        return SqlTemplate(
+            namespace = namespace,
+            statementId = statementId,
+            statementType = statementTag.name,
+            mapperFile = xmlFile,
+            project = project
+        )
     }
     
     private fun parseParameterJson(json: String): Map<String, Any> {
