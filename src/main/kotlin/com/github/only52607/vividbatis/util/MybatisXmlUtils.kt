@@ -40,6 +40,20 @@ object MybatisXmlUtils {
         }
     }
 
+    fun findSqlFragmentByRefid(project: Project, currentXmlFile: XmlFile, refid: String): XmlTag? {
+        val dotIndex = refid.lastIndexOf('.')
+        return if (dotIndex > 0) {
+            val namespace = refid.substring(0, dotIndex)
+            val fragmentId = refid.substring(dotIndex + 1)
+            val targetXmlFile = findMapperXmlFile(project, namespace)
+            if (targetXmlFile != null) {
+                findSqlFragment(targetXmlFile, fragmentId)
+            } else null
+        } else {
+            findSqlFragment(currentXmlFile, refid)
+        }
+    }
+
     fun getMapperNamespace(xmlTag: XmlTag): String? {
         var current = xmlTag.parent
         while (current != null) {

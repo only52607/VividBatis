@@ -46,7 +46,7 @@ class MybatisSqlGenerator {
         }
         
         val resolvedRefid = resolveVariables(refid, parameters, includeParameters)
-        val sqlFragment = MybatisXmlUtils.findSqlFragment(template.mapperFile, resolvedRefid)
+        val sqlFragment = MybatisXmlUtils.findSqlFragmentByRefid(template.project, template.mapperFile, resolvedRefid)
         
         return if (sqlFragment != null) {
             val mergedParameters = parameters.toMutableMap()

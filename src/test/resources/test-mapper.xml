@@ -84,4 +84,27 @@
         WHERE name LIKE #{pattern}
     </select>
 
+    <!-- 本地SQL片段 -->
+    <sql id="localFragment">
+        ORDER BY created_time DESC
+    </sql>
+
+    <!-- Test include with local fragment -->
+    <select id="selectUsersWithLocalInclude" resultType="User">
+        SELECT 
+        <include refid="com.example.CommonFragments.userColumns"/>
+        FROM users
+        <include refid="com.example.CommonFragments.userBaseWhere"/>
+        <include refid="localFragment"/>
+    </select>
+
+    <!-- Test include with parameterized fragment -->
+    <select id="selectUsersWithParameterizedInclude" resultType="User">
+        SELECT * FROM users
+        <include refid="com.example.CommonFragments.userBaseWhere">
+            <property name="name" value="${searchName}"/>
+            <property name="status" value="active"/>
+        </include>
+    </select>
+
 </mapper>

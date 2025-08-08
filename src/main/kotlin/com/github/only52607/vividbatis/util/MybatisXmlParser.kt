@@ -20,7 +20,8 @@ class MybatisXmlParser {
             namespace = namespace,
             statementId = statementId,
             statementType = statementTag.name,
-            mapperFile = xmlFile
+            mapperFile = xmlFile,
+            project = project
         )
     }
 }
@@ -29,5 +30,6 @@ data class SqlTemplate(
     val namespace: String,
     val statementId: String,
     val statementType: String,
-    val mapperFile: XmlFile
+    val mapperFile: XmlFile,
+    val project: Project
 ) 
