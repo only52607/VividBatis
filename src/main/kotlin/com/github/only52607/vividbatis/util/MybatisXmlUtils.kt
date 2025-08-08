@@ -9,7 +9,7 @@ import com.intellij.psi.xml.XmlTag
 
 object MybatisXmlUtils {
     val SUPPORTED_STATEMENTS = setOf("select", "insert", "update", "delete")
-    val SUPPORTED_DYNAMIC_TAGS = setOf("if", "choose", "when", "otherwise", "foreach", "where", "set", "include", "bind", "sql")
+    val SUPPORTED_DYNAMIC_TAGS = setOf("if", "choose", "when", "otherwise", "foreach", "where", "set", "trim", "include", "bind", "sql")
 
     fun findMapperXmlFile(project: Project, namespace: String): XmlFile? {
         val psiManager = PsiManager.getInstance(project)
@@ -40,17 +40,17 @@ object MybatisXmlUtils {
         }
     }
 
-    fun findSqlFragmentByRefid(project: Project, currentXmlFile: XmlFile, refid: String): XmlTag? {
-        val dotIndex = refid.lastIndexOf('.')
+    fun findSqlFragmentByRefId(project: Project, currentXmlFile: XmlFile, refId: String): XmlTag? {
+        val dotIndex = refId.lastIndexOf('.')
         return if (dotIndex > 0) {
-            val namespace = refid.substring(0, dotIndex)
-            val fragmentId = refid.substring(dotIndex + 1)
+            val namespace = refId.substring(0, dotIndex)
+            val fragmentId = refId.substring(dotIndex + 1)
             val targetXmlFile = findMapperXmlFile(project, namespace)
             if (targetXmlFile != null) {
                 findSqlFragment(targetXmlFile, fragmentId)
             } else null
         } else {
-            findSqlFragment(currentXmlFile, refid)
+            findSqlFragment(currentXmlFile, refId)
         }
     }
 
@@ -65,14 +65,12 @@ object MybatisXmlUtils {
         return null
     }
 
-    fun isMybatisMapperFile(element: XmlTag): Boolean {
-        // 向上遍历XML树，查找根节点
+    fun isMybatisTag(element: XmlTag): Boolean {
         var current = element
         while (current.parentTag != null) {
             current = current.parentTag!!
         }
-        
-        // 检查根节点是否为mapper标签且有namespace属性
+
         return current.name == "mapper" && current.getAttributeValue("namespace") != null
     }
 } 

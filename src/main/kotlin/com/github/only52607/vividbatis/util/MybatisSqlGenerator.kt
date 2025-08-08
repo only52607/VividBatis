@@ -24,6 +24,7 @@ class MybatisSqlGenerator {
             "bind" -> "" // Processed in child tags
             "if" -> processConditionalTag(tag, parameters, template)
             "foreach" -> processForeachTag(tag, parameters, template)
+            "trim" -> processTrimTag(tag, parameters, template)
             "where" -> processWhereTag(tag, parameters, template)
             "set" -> processSetTag(tag, parameters, template)
             "choose" -> processChooseTag(tag, parameters, template)
@@ -34,7 +35,7 @@ class MybatisSqlGenerator {
     }
     
     private fun processIncludeTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
-        val refID = tag.getAttributeValue("refid") ?: return ""
+        val refId = tag.getAttributeValue("refid") ?: return ""
         val includeParameters = mutableMapOf<String, String>()
         
         tag.findSubTags("property").forEach { property ->
@@ -45,8 +46,8 @@ class MybatisSqlGenerator {
             }
         }
         
-        val resolvedRefID = resolveVariables(refID, parameters, includeParameters)
-        val sqlFragment = MybatisXmlUtils.findSqlFragmentByRefid(template.project, template.mapperFile, resolvedRefID)
+        val resolvedRefId = resolveVariables(refId, parameters, includeParameters)
+        val sqlFragment = MybatisXmlUtils.findSqlFragmentByRefId(template.project, template.mapperFile, resolvedRefId)
         
         return if (sqlFragment != null) {
             val mergedParameters = parameters.toMutableMap()
@@ -80,24 +81,109 @@ class MybatisSqlGenerator {
         
         return open + items.joinToString(separator) + close
     }
-    
+
+    private fun processTrimTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
+        val content = processChildTags(tag, parameters, template).trim()
+        if (content.isBlank()) return ""
+
+        val prefix = tag.getAttributeValue("prefix") ?: ""
+        val suffix = tag.getAttributeValue("suffix") ?: ""
+        val prefixOverrides = parseOverrides(tag.getAttributeValue("prefixOverrides"))
+        val suffixOverrides = parseOverrides(tag.getAttributeValue("suffixOverrides"))
+
+        return applyTrim(
+            content = content,
+            prefix = prefix,
+            suffix = suffix,
+            prefixOverrides = prefixOverrides,
+            suffixOverrides = suffixOverrides,
+            addSpaceAfterPrefix = true
+        )
+    }
+
     private fun processWhereTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
         val content = processChildTags(tag, parameters, template).trim()
         if (content.isBlank()) return ""
-        
-        val processedContent = content
-            .replaceFirst("^\\s*AND\\s+".toRegex(RegexOption.IGNORE_CASE), "")
-            .replaceFirst("^\\s*OR\\s+".toRegex(RegexOption.IGNORE_CASE), "")
-        
-        return if (processedContent.isNotBlank()) "WHERE $processedContent" else ""
+
+        return applyTrim(
+            content = content,
+            prefix = "WHERE",
+            suffix = "",
+            prefixOverrides = listOf("AND ", "OR "),
+            suffixOverrides = emptyList(),
+            addSpaceAfterPrefix = true
+        )
     }
     
     private fun processSetTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {
         val content = processChildTags(tag, parameters, template).trim()
         if (content.isBlank()) return ""
-        
-        val processedContent = content.removeSuffix(",").trim()
-        return if (processedContent.isNotBlank()) "SET $processedContent" else ""
+
+        return applyTrim(
+            content = content,
+            prefix = "SET",
+            suffix = "",
+            prefixOverrides = emptyList(),
+            suffixOverrides = listOf(","),
+            addSpaceAfterPrefix = true
+        )
+    }
+
+    private fun parseOverrides(attr: String?): List<String> {
+        return attr?.split('|')?.map { it }?.filter { it.isNotEmpty() } ?: emptyList()
+    }
+
+    private fun applyTrim(
+        content: String,
+        prefix: String,
+        suffix: String,
+        prefixOverrides: List<String>,
+        suffixOverrides: List<String>,
+        addSpaceAfterPrefix: Boolean
+    ): String {
+        var working = content.trim()
+
+        if (working.isBlank()) return ""
+
+        if (prefixOverrides.isNotEmpty()) {
+            var changed: Boolean
+            do {
+                changed = false
+                for (token in prefixOverrides) {
+                    val pattern = ("^\\s*" + Regex.escape(token)).toRegex(RegexOption.IGNORE_CASE)
+                    val newContent = working.replaceFirst(pattern, "").trimStart()
+                    if (newContent != working) {
+                        working = newContent
+                        changed = true
+                        break
+                    }
+                }
+            } while (changed && working.isNotBlank())
+        }
+
+        if (suffixOverrides.isNotEmpty()) {
+            var changed: Boolean
+            do {
+                changed = false
+                for (token in suffixOverrides) {
+                    val pattern = (Regex.escape(token) + "\\s*$").toRegex(RegexOption.IGNORE_CASE)
+                    val newContent = working.replaceFirst(pattern, "").trimEnd()
+                    if (newContent != working) {
+                        working = newContent
+                        changed = true
+                        break
+                    }
+                }
+            } while (changed && working.isNotBlank())
+        }
+
+        if (working.isBlank()) return ""
+
+        val withPrefix = if (prefix.isNotEmpty()) {
+            if (addSpaceAfterPrefix) "$prefix $working" else prefix + working
+        } else working
+        val withSuffix = if (suffix.isNotEmpty()) withPrefix + suffix else withPrefix
+        return withSuffix
     }
     
     private fun processChooseTag(tag: XmlTag, parameters: Map<String, Any>, template: SqlTemplate): String {

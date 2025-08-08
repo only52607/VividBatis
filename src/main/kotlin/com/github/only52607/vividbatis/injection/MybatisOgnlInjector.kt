@@ -42,7 +42,7 @@ class MybatisOgnlInjector : MultiHostInjector {
         val xmlTag = xmlAttribute.parent as? XmlTag ?: return
         
         // Check if this is a MyBatis mapper file
-        if (!MybatisXmlUtils.isMybatisMapperFile(xmlTag)) return
+        if (!MybatisXmlUtils.isMybatisTag(xmlTag)) return
         
         // Check if the tag supports OGNL and the attribute is an OGNL attribute
         if (xmlTag.name in OGNL_SUPPORTING_TAGS && attributeName in OGNL_ATTRIBUTES) {

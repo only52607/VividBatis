@@ -20,7 +20,7 @@ class MybatisStatementLineMarkerProvider : LineMarkerProvider {
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
         if (element !is XmlTag) return null
         if (element.name !in MybatisXmlUtils.SUPPORTED_STATEMENTS) return null
-        if (!MybatisXmlUtils.isMybatisMapperFile(element)) return null
+        if (!MybatisXmlUtils.isMybatisTag(element)) return null
         val statementId = element.getAttributeValue("id") ?: return null
         
         return LineMarkerInfo(
