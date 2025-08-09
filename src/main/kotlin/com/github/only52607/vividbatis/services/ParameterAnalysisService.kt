@@ -27,18 +27,18 @@ class ParameterAnalysisService(private val project: Project) {
     fun generateDefaultParameterJson(namespace: String, statementId: String): String {
         val parameterInfo = analyzeMapperMethod(namespace, statementId)
         
-        return if (parameterInfo != null) {
-            generateParameterTemplate(parameterInfo)
-        } else {
-            val parameterType = project.findMybatisMapperXml(namespace)
-                ?.findMybatisStatementById(statementId)
-                ?.getAttributeValue("parameterType")
-            
-            when {
-                parameterType == null -> "{}"
-                parameterType == "java.util.Map" -> "{\n  \"key1\": \"value1\",\n  \"key2\": \"value2\"\n}"
-                else -> "{}"
-            }
+        if (parameterInfo != null) {
+            return generateParameterTemplate(parameterInfo)
+        }
+
+        val parameterType = project.findMybatisMapperXml(namespace)
+            ?.findMybatisStatementById(statementId)
+            ?.getAttributeValue("parameterType")
+
+        return when (parameterType) {
+            null -> "{}"
+            "java.util.Map" -> "{\n  \"key1\": \"value1\",\n  \"key2\": \"value2\"\n}"
+            else -> "{}"
         }
     }
     
