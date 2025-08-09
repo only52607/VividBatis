@@ -4,6 +4,7 @@ import com.github.only52607.vividbatis.message.SqlStatementSelectedEvent
 import com.github.only52607.vividbatis.message.SqlStatementSelectedListener
 import com.github.only52607.vividbatis.services.ParameterAnalysisService
 import com.github.only52607.vividbatis.services.SqlGenerationService
+import com.google.gson.Gson
 import com.intellij.icons.AllIcons
 import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationManager
@@ -310,10 +311,12 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
 
         try {
             hideError()
-            parameterEditor.text = parameterAnalysisService.generateDefaultParameterJson(
+            parameterEditor.text = parameterAnalysisService.getStatementParameterInfo(
                 event.namespace,
                 event.statementId
-            )
+            )?.generateTemplate()?.let {
+                Gson().toJson(it)
+            } ?: "{}"
             generateButton.isEnabled = true
 
             generateSql()

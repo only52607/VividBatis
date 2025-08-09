@@ -12,6 +12,7 @@ import com.github.only52607.vividbatis.util.OgnlRootObject
 import com.github.only52607.vividbatis.util.SqlTemplate
 import com.github.only52607.vividbatis.util.findMybatisMapperXml
 import com.github.only52607.vividbatis.util.findMybatisStatementById
+import com.google.gson.Gson
 import java.io.File
 
 @TestDataPath("\$CONTENT_ROOT/src/test/testData")
@@ -37,7 +38,11 @@ class MyPluginTest : BasePlatformTestCase() {
     fun testParameterAnalysisService() {
         val parameterAnalysisService = project.getService(ParameterAnalysisService::class.java)
         assertNotNull(parameterAnalysisService)
-        val json = parameterAnalysisService.generateDefaultParameterJson("test.namespace", "testStatement")
+        val json = parameterAnalysisService.getStatementParameterInfo(
+            "test.namespace", "testStatement"
+        )?.generateTemplate()?.let {
+            Gson().toJson(it)
+        } ?: "{}"
         assertNotNull(json)
     }
     

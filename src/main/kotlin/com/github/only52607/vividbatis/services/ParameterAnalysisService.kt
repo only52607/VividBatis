@@ -21,25 +21,7 @@ class ParameterAnalysisService(private val project: Project) {
         .registerTypeAdapter(List::class.java, ListTypeAdapter())
         .registerTypeAdapter(Map::class.java, MapTypeAdapter())
         .create()
-    
-    fun generateDefaultParameterJson(namespace: String, statementId: String): String {
-        val parameterInfo = getStatementParameterInfo(namespace, statementId)
-        
-        if (parameterInfo != null) {
-            return parameterInfo.generateTemplate(gson)
-        }
 
-        val parameterType = project.findMybatisMapperXml(namespace)
-            ?.findMybatisStatementById(statementId)
-            ?.getAttributeValue("parameterType")
-
-        return when (parameterType) {
-            null -> "{}"
-            "java.util.Map" -> "{\n  \"key1\": \"value1\",\n  \"key2\": \"value2\"\n}"
-            else -> "{}"
-        }
-    }
-    
     fun getStatementParameterInfo(namespace: String, statementId: String): ParameterInfo? {
         val parameterTypeInXml = project.findMybatisMapperXml(namespace)
             ?.findMybatisStatementById(statementId)
@@ -56,17 +38,10 @@ class ParameterAnalysisService(private val project: Project) {
         if (parameters.size == 1) {
             val param = parameters[0]
             val paramType = param.type.canonicalText
-            when {
-                paramType == "java.util.Map" || paramType.startsWith("java.util.Map<") -> {
-                    return ParameterInfo.MapParameter
-                }
-                TypeUtils.isPrimitiveOrWrapper(paramType) || paramType == "java.lang.String" -> {
-                    return ParameterInfo.SinglePrimitiveParameter(paramType)
-                }
-                else -> {
-                    val paramClass = findPsiClass(paramType)
-                    return ParameterInfo.JavaBeanParameter(paramClass, paramType)
-                }
+            return when {
+                TypeUtils.isPrimitiveOrWrapper(paramType) -> ParameterInfo.SinglePrimitiveParameter(paramType)
+                paramType.startsWith("java.util.Map<") -> ParameterInfo.MapParameter
+                else -> ParameterInfo.JavaBeanParameter(findPsiClass(paramType), paramType)
             }
         }
         val hasParamAnnotations = parameters.any { hasParamAnnotation(it) }
@@ -121,7 +96,7 @@ class ParameterAnalysisService(private val project: Project) {
     }
     
     private fun getParameterName(parameter: PsiParameter): String {
-        return getParamAnnotationValue(parameter) ?: parameter.name ?: "param${parameter.parent.children.indexOf(parameter)}"
+        return getParamAnnotationValue(parameter) ?: parameter.name
     }
     
     private class ListTypeAdapter : JsonSerializer<List<*>>, JsonDeserializer<List<*>> {

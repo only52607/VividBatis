@@ -13,7 +13,7 @@ sealed class ParameterInfo {
     /**
      * 生成默认参数模板
      */
-    abstract fun generateTemplate(gson: Gson): String
+    abstract fun generateTemplate(): JsonElement
     
     /**
      * 解析JSON参数并构建OgnlRootObject
@@ -24,13 +24,8 @@ sealed class ParameterInfo {
      * Map类型参数
      */
     object MapParameter : ParameterInfo() {
-        override fun generateTemplate(gson: Gson): String {
-            return """
-            {
-              "key1": "value1",
-              "key2": "value2"
-            }
-            """.trimIndent()
+        override fun generateTemplate(): JsonElement {
+            return JsonObject()
         }
         
         override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
@@ -51,14 +46,14 @@ sealed class ParameterInfo {
      * 注解参数类型
      */
     data class AnnotationParameter(val parameters: List<MethodParameter>) : ParameterInfo() {
-        override fun generateTemplate(gson: Gson): String {
+        override fun generateTemplate(): JsonElement {
             val jsonObject = JsonObject()
             parameters.forEach { param ->
                 val paramName = param.paramAnnotation ?: param.name
                 val defaultValue = TypeUtils.generateDefaultValue(param.type)
                 jsonObject.add(paramName, defaultValue)
             }
-            return gson.toJson(jsonObject)
+            return jsonObject
         }
         
         override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
@@ -87,11 +82,9 @@ sealed class ParameterInfo {
         val parameterClass: PsiClass?,
         val parameterTypeString: String?
     ) : ParameterInfo() {
-        override fun generateTemplate(gson: Gson): String {
-            if (parameterClass == null) return "{}"
-            val analyzer = JavaClassAnalyzer()
-            val jsonObject = analyzer.analyzeClass(parameterClass)
-            return gson.toJson(jsonObject)
+        override fun generateTemplate(): JsonElement {
+            if (parameterClass == null) return JsonObject()
+            return JavaClassAnalyzer().analyzeClass(parameterClass)
         }
         
         override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
@@ -119,7 +112,7 @@ sealed class ParameterInfo {
         val parameters: List<MethodParameter>,
         val psiClassFinder: ((String) -> PsiClass?)? = null
     ) : ParameterInfo() {
-        override fun generateTemplate(gson: Gson): String {
+        override fun generateTemplate(): JsonElement {
             val jsonObject = JsonObject()
             parameters.forEach { param ->
                 val paramName = param.paramAnnotation ?: param.name
@@ -140,7 +133,7 @@ sealed class ParameterInfo {
                     }
                 }
             }
-            return gson.toJson(jsonObject)
+            return jsonObject
         }
         
         override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
@@ -166,13 +159,13 @@ sealed class ParameterInfo {
      * 位置参数类型
      */
     data class PositionalParameter(val parameters: List<MethodParameter>) : ParameterInfo() {
-        override fun generateTemplate(gson: Gson): String {
+        override fun generateTemplate(): JsonElement {
             val jsonArray = JsonArray()
             parameters.forEach { param ->
                 val defaultValue = TypeUtils.generateDefaultValue(param.type)
                 jsonArray.add(defaultValue)
             }
-            return gson.toJson(jsonArray)
+            return jsonArray
         }
         
         override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
@@ -198,10 +191,10 @@ sealed class ParameterInfo {
      * 单一原始类型参数
      */
     data class SinglePrimitiveParameter(val parameterTypeString: String?) : ParameterInfo() {
-        override fun generateTemplate(gson: Gson): String {
-            if (parameterTypeString == null) return "{}"
+        override fun generateTemplate(): JsonElement {
+            if (parameterTypeString == null) return JsonObject()
             val defaultValue = TypeUtils.generateDefaultValue(parameterTypeString)
-            return gson.toJson(defaultValue)
+            return defaultValue
         }
         
         override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {

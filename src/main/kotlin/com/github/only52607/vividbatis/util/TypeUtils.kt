@@ -8,7 +8,7 @@ object TypeUtils {
         "double", "java.lang.Double", "float", "java.lang.Float",
         "boolean", "java.lang.Boolean", "byte", "java.lang.Byte",
         "short", "java.lang.Short", "char", "java.lang.Character",
-        "java.lang.String"
+        "string", "java.lang.String"
     )
     
     private val COLLECTION_TYPES = setOf(
