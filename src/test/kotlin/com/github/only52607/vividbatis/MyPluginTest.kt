@@ -8,6 +8,7 @@ import com.intellij.util.PsiErrorElementUtil
 import com.github.only52607.vividbatis.services.ParameterAnalysisService
 import com.github.only52607.vividbatis.services.SqlGenerationService
 import com.github.only52607.vividbatis.util.MybatisSqlGenerator
+import com.github.only52607.vividbatis.util.OgnlRootObject
 import com.github.only52607.vividbatis.util.SqlTemplate
 import com.github.only52607.vividbatis.util.findMybatisMapperXml
 import com.github.only52607.vividbatis.util.findMybatisStatementById
@@ -34,7 +35,7 @@ class MyPluginTest : BasePlatformTestCase() {
     }
 
     fun testParameterAnalysisService() {
-        val parameterAnalysisService = ParameterAnalysisService.getInstance(project)
+        val parameterAnalysisService = project.getService(ParameterAnalysisService::class.java)
         assertNotNull(parameterAnalysisService)
         val json = parameterAnalysisService.generateDefaultParameterJson("test.namespace", "testStatement")
         assertNotNull(json)
@@ -73,9 +74,10 @@ class MyPluginTest : BasePlatformTestCase() {
                 "name" to "test",
                 "status" to "active"
             )
+            val rootObject = OgnlRootObject(parameters)
             
             try {
-                val sql = generator.generateSql(it, parameters)
+                val sql = generator.generateSql(it, rootObject)
                 assertNotNull("Generated SQL should not be null", sql)
                 assertTrue("SQL should contain included columns", sql.contains("id, name, email, age, status, created_time"))
                 assertTrue("SQL should contain WHERE clause", sql.contains("WHERE"))

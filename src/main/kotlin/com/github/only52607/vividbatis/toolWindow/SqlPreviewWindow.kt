@@ -25,7 +25,7 @@ import javax.swing.JScrollPane
 
 class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListener {
 
-    private val parameterAnalysisService = ParameterAnalysisService.getInstance(project)
+    private val parameterAnalysisService = project.getService(ParameterAnalysisService::class.java)
     private val sqlGenerationService = SqlGenerationService.getInstance(project)
 
     private val statementInfoLabel = JBLabel("请选择一个 SQL 语句标签")

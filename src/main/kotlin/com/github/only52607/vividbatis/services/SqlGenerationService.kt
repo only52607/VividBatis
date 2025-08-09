@@ -21,10 +21,10 @@ class SqlGenerationService(private val project: Project) {
     
     private val mybatisSqlGenerator = MybatisSqlGenerator()
     private val gson = Gson()
-    private val parameterService = ParameterAnalysisService.getInstance(project)
+    private val parameterService = project.getService(ParameterAnalysisService::class.java)
     
     fun generateSql(namespace: String, statementId: String, parameterJson: String): String {
-        val parameterInfo = parameterService.analyzeMapperMethod(namespace, statementId)
+        val parameterInfo = parameterService.getStatementParameterInfo(namespace, statementId)
         val sqlTemplate = buildSqlTemplate(namespace, statementId)
             ?: throw RuntimeException("未找到语句: $namespace.$statementId")
         
