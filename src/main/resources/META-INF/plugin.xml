@@ -16,7 +16,9 @@
         <toolWindow factoryClass="com.github.only52607.vividbatis.toolWindow.SqlPreviewToolWindowFactory" 
                     id="VividBatis" 
                     displayName="VividBatis"
-                    anchor="right"/>
+                    anchor="right"
+                    canCloseContents="false"
+                    icon="AllIcons.Nodes.DataTables"/>
         
         <!-- Line Marker Provider -->
         <codeInsight.lineMarkerProvider language="XML" 
