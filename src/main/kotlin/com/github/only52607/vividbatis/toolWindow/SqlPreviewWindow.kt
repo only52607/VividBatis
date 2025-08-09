@@ -61,7 +61,7 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
                 } catch (e: Exception) {
                     Messages.showErrorDialog(
                         project,
-                        "生成 SQL 失败: ${e.message}",
+                        "生成 SQL 失败: ${e.stackTraceToString()}",
                         "错误"
                     )
                 }

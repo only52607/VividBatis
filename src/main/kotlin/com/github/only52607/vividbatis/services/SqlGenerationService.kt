@@ -1,6 +1,7 @@
 package com.github.only52607.vividbatis.services
 
 import com.github.only52607.vividbatis.util.MybatisSqlGenerator
+import com.github.only52607.vividbatis.util.OgnlRootObject
 import com.github.only52607.vividbatis.util.SqlTemplate
 import com.github.only52607.vividbatis.util.findMybatisMapperXml
 import com.github.only52607.vividbatis.util.findMybatisStatementById
@@ -20,12 +21,21 @@ class SqlGenerationService(private val project: Project) {
     
     private val mybatisSqlGenerator = MybatisSqlGenerator()
     private val gson = Gson()
+    private val parameterService = ParameterAnalysisService.getInstance(project)
     
     fun generateSql(namespace: String, statementId: String, parameterJson: String): String {
-        val parameters = parseParameterJson(parameterJson)
+        val parameterInfo = parameterService.analyzeMapperMethod(namespace, statementId)
         val sqlTemplate = buildSqlTemplate(namespace, statementId)
             ?: throw RuntimeException("未找到语句: $namespace.$statementId")
-        return mybatisSqlGenerator.generateSql(sqlTemplate, parameters)
+        
+        val rootObject = if (parameterInfo != null) {
+            parameterService.parseParameterJson(parameterJson, parameterInfo)
+        } else {
+            val parameters = parseParameterJson(parameterJson)
+            OgnlRootObject(parameters)
+        }
+        
+        return mybatisSqlGenerator.generateSql(sqlTemplate, rootObject)
     }
 
     private fun buildSqlTemplate(namespace: String, statementId: String): SqlTemplate? {
