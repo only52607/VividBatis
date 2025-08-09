@@ -16,7 +16,7 @@ import javax.swing.Icon
 class MybatisStatementLineMarkerProvider : LineMarkerProvider {
     
     companion object {
-        private val SQL_ICON: Icon = AllIcons.Nodes.DataTables
+        private val SQL_ICON: Icon = AllIcons.Actions.Preview
     }
     
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {

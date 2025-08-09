@@ -1,0 +1,12 @@
+<svg width="40" height="40" viewBox="39 39 122 122" xmlns="http://www.w3.org/2000/svg">
+    <title>Fluid Ribbon V</title>
+    <defs>
+        <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FF6EC7"/>
+            <stop offset="50%" stop-color="#845EC2"/>
+            <stop offset="100%" stop-color="#00C9A7"/>
+        </linearGradient>
+    </defs>
+    <path d="M100,150 C30,150 30,50 100,50 C170,50 170,150 100,150 Z" fill="url(#ribbonGrad)" />
+    <text x="100" y="130" text-anchor="middle" fill="#FFFFFF" font-family="Poppins, sans-serif" font-weight="700" font-size="80">V</text>
+</svg>

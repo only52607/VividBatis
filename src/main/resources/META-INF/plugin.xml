@@ -18,7 +18,7 @@
                     displayName="VividBatis"
                     anchor="right"
                     canCloseContents="false"
-                    icon="AllIcons.Nodes.DataTables"/>
+                    icon="AllIcons.Actions.Preview"/>
         
         <!-- Line Marker Provider -->
         <codeInsight.lineMarkerProvider language="XML" 
