@@ -42,15 +42,30 @@ class ParameterAnalysisService(private val project: Project) {
             val paramType = param.type.canonicalText
             return when {
                 TypeUtils.isPrimitive(paramType) -> StatementParameterType.Multiple(
-                    StatementParameterDeclaration(name = getParameterName(param) ?: "_parameter", psiParameter = param)
+                    StatementParameterDeclaration(name = findParameterName(param) ?: "_parameter", psiParameter = param)
                 )
 
-                TypeUtils.isMap(paramType) -> StatementParameterType.Map()
+                TypeUtils.isMap(paramType) -> {
+                    val parameterName = findParameterName(param)
+                    if (parameterName != null) {
+                        StatementParameterType.Multiple(
+                            StatementParameterDeclaration(name = parameterName, psiParameter = param)
+                        )
+                    } else {
+                        StatementParameterType.Map()
+                    }
+                }
+
                 else -> StatementParameterType.JavaBean(param.type)
             }
         }
         return StatementParameterType.Multiple(
-            parameters.map { param -> StatementParameterDeclaration(name = getParameterName(param), psiParameter = param) }
+            parameters.map { param ->
+                StatementParameterDeclaration(
+                    name = findParameterName(param),
+                    psiParameter = param
+                )
+            }
         )
     }
 
@@ -67,8 +82,8 @@ class ParameterAnalysisService(private val project: Project) {
         return findPsiMethod(mapperInterface, methodName)
     }
 
-    private fun getParameterName(parameter: PsiParameter): String? {
-        val paramAnnotation = parameter.annotations.find { it.qualifiedName == TYPE_IBATIS_PARAM }
-        return paramAnnotation?.findAttributeValue("value")?.text?.removeSurrounding("\"")
+    private fun findParameterName(parameter: PsiParameter): String? {
+        return parameter.annotations.find { it.qualifiedName == TYPE_IBATIS_PARAM }
+            ?.findAttributeValue("value")?.text?.removeSurrounding("\"")
     }
 } 
