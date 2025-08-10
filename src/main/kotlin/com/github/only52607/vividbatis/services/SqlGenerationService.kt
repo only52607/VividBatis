@@ -1,13 +1,11 @@
 package com.github.only52607.vividbatis.services
 
 import com.github.only52607.vividbatis.util.MybatisSqlGenerator
-import com.github.only52607.vividbatis.util.OgnlRootObject
 import com.github.only52607.vividbatis.util.SqlTemplate
 import com.github.only52607.vividbatis.util.findMybatisMapperXml
 import com.github.only52607.vividbatis.util.findMybatisStatementById
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
-import com.google.gson.Gson
 import com.google.gson.JsonElement
 
 @Service
@@ -20,7 +18,6 @@ class SqlGenerationService(private val project: Project) {
     }
     
     private val mybatisSqlGenerator = MybatisSqlGenerator()
-    private val gson = Gson()
     private val parameterService = project.getService(ParameterAnalysisService::class.java)
     
     fun generateSql(namespace: String, statementId: String, parameterJson: String): String {
@@ -28,12 +25,7 @@ class SqlGenerationService(private val project: Project) {
         val sqlTemplate = buildSqlTemplate(namespace, statementId)
             ?: throw RuntimeException("未找到语句: $namespace.$statementId")
         
-        val rootObject = if (parameterInfo != null) {
-            parameterService.parseParameterJson(parameterJson, parameterInfo)
-        } else {
-            val parameters = parseParameterJson(parameterJson)
-            OgnlRootObject(parameters)
-        }
+        val rootObject = parameterService.buildRootObject(parameterJson, parameterInfo)
         
         return mybatisSqlGenerator.generateSql(sqlTemplate, rootObject)
     }
@@ -49,18 +41,7 @@ class SqlGenerationService(private val project: Project) {
             project = project
         )
     }
-    
-    private fun parseParameterJson(json: String): Map<String, Any> {
-        if (json.isBlank()) return emptyMap()
-        
-        return try {
-            val jsonElement = gson.fromJson(json, JsonElement::class.java)
-            flattenJsonObject(jsonElement)
-        } catch (e: Exception) {
-            throw RuntimeException("JSON 解析失败: ${e.message}", e)
-        }
-    }
-    
+
     private fun flattenJsonObject(element: JsonElement): Map<String, Any> {
         val result = mutableMapOf<String, Any>()
         

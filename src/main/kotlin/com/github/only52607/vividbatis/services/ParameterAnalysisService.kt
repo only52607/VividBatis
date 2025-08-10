@@ -11,7 +11,6 @@ import java.lang.reflect.Type
 
 @Service
 class ParameterAnalysisService(private val project: Project) {
-    
     companion object {
         const val TYPE_IBATIS_PARAM = "org.apache.ibatis.annotations.Param"
     }
@@ -22,7 +21,7 @@ class ParameterAnalysisService(private val project: Project) {
         .registerTypeAdapter(Map::class.java, MapTypeAdapter())
         .create()
 
-    fun getStatementParameterInfo(namespace: String, statementId: String): ParameterInfo? {
+    fun getStatementParameterInfo(namespace: String, statementId: String): ParameterInfo {
         val parameterTypeInXml = project.findMybatisMapperXml(namespace)
             ?.findMybatisStatementById(statementId)
             ?.getAttributeValue("parameterType")
@@ -30,7 +29,7 @@ class ParameterAnalysisService(private val project: Project) {
             val paramClass = findPsiClass(parameterTypeInXml)
             return ParameterInfo.JavaBeanParameter(paramClass, parameterTypeInXml)
         }
-        val method = findPsiMethod(namespace, statementId) ?: return null
+        val method = findPsiMethod(namespace, statementId) ?: return ParameterInfo.MapParameter
         val parameters = method.parameterList.parameters
         if (parameters.isEmpty()) {
             return ParameterInfo.MapParameter
@@ -44,31 +43,20 @@ class ParameterAnalysisService(private val project: Project) {
                 else -> ParameterInfo.JavaBeanParameter(findPsiClass(paramType), paramType)
             }
         }
-        val hasParamAnnotations = parameters.any { hasParamAnnotation(it) }
-        val methodParams = parameters.mapIndexed { index, param ->
+        return ParameterInfo.MultipleParameter(parameters.mapIndexed { index, param ->
             MethodParameter(
                 name = getParameterName(param),
-                type = param.type.canonicalText,
-                paramAnnotation = getParamAnnotationValue(param),
                 position = index,
                 psiParameter = param
             )
-        }
-        return if (hasParamAnnotations) {
-            val hasMixedTypes = methodParams.any { param ->
-                !TypeUtils.isPrimitiveOrWrapper(param.type) && param.type != "java.lang.String"
-            }
-            if (hasMixedTypes) {
-                ParameterInfo.MixedParameter(methodParams, ::findPsiClass)
-            } else {
-                ParameterInfo.AnnotationParameter(methodParams)
-            }
-        } else {
-            ParameterInfo.PositionalParameter(methodParams)
-        }
+        })
     }
     
-    fun parseParameterJson(json: String, parameterInfo: ParameterInfo): OgnlRootObject {
+    fun buildRootObject(json: String, parameterInfo: ParameterInfo): OgnlRootObject {
+        return buildRootObject(gson.fromJson(json, JsonElement::class.java), parameterInfo)
+    }
+
+    fun buildRootObject(json: JsonElement, parameterInfo: ParameterInfo): OgnlRootObject {
         val jsonElement = gson.fromJson(json, JsonElement::class.java)
         return parameterInfo.parseJson(jsonElement, gson)
     }
@@ -86,17 +74,14 @@ class ParameterAnalysisService(private val project: Project) {
         return findPsiMethod(mapperInterface, methodName)
     }
 
-    private fun hasParamAnnotation(parameter: PsiParameter): Boolean {
-        return parameter.annotations.any { it.qualifiedName == TYPE_IBATIS_PARAM }
-    }
-    
     private fun getParamAnnotationValue(parameter: PsiParameter): String? {
         val paramAnnotation = parameter.annotations.find { it.qualifiedName == TYPE_IBATIS_PARAM }
         return paramAnnotation?.findAttributeValue("value")?.text?.removeSurrounding("\"")
     }
     
-    private fun getParameterName(parameter: PsiParameter): String {
-        return getParamAnnotationValue(parameter) ?: parameter.name
+    private fun getParameterName(parameter: PsiParameter): String? {
+        val paramAnnotation = parameter.annotations.find { it.qualifiedName == TYPE_IBATIS_PARAM }
+        return paramAnnotation?.findAttributeValue("value")?.text?.removeSurrounding("\"")
     }
     
     private class ListTypeAdapter : JsonSerializer<List<*>>, JsonDeserializer<List<*>> {

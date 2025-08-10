@@ -45,11 +45,11 @@ sealed class ParameterInfo {
     /**
      * 注解参数类型
      */
-    data class AnnotationParameter(val parameters: List<MethodParameter>) : ParameterInfo() {
+    data class MultipleParameter(val parameters: List<MethodParameter>) : ParameterInfo() {
         override fun generateTemplate(): JsonElement {
             val jsonObject = JsonObject()
             parameters.forEach { param ->
-                val paramName = param.paramAnnotation ?: param.name
+                val paramName = param.name ?: "param${param.position}"
                 val defaultValue = TypeUtils.generateDefaultValue(param.type)
                 jsonObject.add(paramName, defaultValue)
             }
@@ -62,7 +62,7 @@ sealed class ParameterInfo {
             if (jsonElement.isJsonObject) {
                 val jsonObject = jsonElement.asJsonObject
                 parameters.forEach { param ->
-                    val paramName = param.paramAnnotation ?: param.name
+                    val paramName = param.name ?: "param${param.position}"
                     val jsonValue = jsonObject.get(paramName)
                     if (jsonValue != null) {
                         val convertedValue = convertJsonToJavaObject(jsonValue, param.type)
@@ -104,89 +104,7 @@ sealed class ParameterInfo {
             return OgnlRootObject(parameterMap)
         }
     }
-    
-    /**
-     * 混合参数类型
-     */
-    data class MixedParameter(
-        val parameters: List<MethodParameter>,
-        val psiClassFinder: ((String) -> PsiClass?)? = null
-    ) : ParameterInfo() {
-        override fun generateTemplate(): JsonElement {
-            val jsonObject = JsonObject()
-            parameters.forEach { param ->
-                val paramName = param.paramAnnotation ?: param.name
-                when {
-                    TypeUtils.isPrimitiveOrWrapper(param.type) || param.type == "java.lang.String" -> {
-                        val defaultValue = TypeUtils.generateDefaultValue(param.type)
-                        jsonObject.add(paramName, defaultValue)
-                    }
-                    else -> {
-                        val paramClass = psiClassFinder?.invoke(param.type)
-                        if (paramClass != null) {
-                            val analyzer = JavaClassAnalyzer()
-                            val beanObject = analyzer.analyzeClass(paramClass)
-                            jsonObject.add(paramName, beanObject)
-                        } else {
-                            jsonObject.add(paramName, JsonObject())
-                        }
-                    }
-                }
-            }
-            return jsonObject
-        }
-        
-        override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
-            val parameterMap = mutableMapOf<String, Any>()
-            
-            if (jsonElement.isJsonObject) {
-                val jsonObject = jsonElement.asJsonObject
-                parameters.forEach { param ->
-                    val paramName = param.paramAnnotation ?: param.name
-                    val jsonValue = jsonObject.get(paramName)
-                    if (jsonValue != null) {
-                        val convertedValue = convertJsonToJavaObject(jsonValue, param.type)
-                        parameterMap[paramName] = convertedValue
-                    }
-                }
-            }
-            
-            return OgnlRootObject(parameterMap)
-        }
-    }
-    
-    /**
-     * 位置参数类型
-     */
-    data class PositionalParameter(val parameters: List<MethodParameter>) : ParameterInfo() {
-        override fun generateTemplate(): JsonElement {
-            val jsonArray = JsonArray()
-            parameters.forEach { param ->
-                val defaultValue = TypeUtils.generateDefaultValue(param.type)
-                jsonArray.add(defaultValue)
-            }
-            return jsonArray
-        }
-        
-        override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
-            val parameterMap = mutableMapOf<String, Any>()
-            
-            if (jsonElement.isJsonArray) {
-                val jsonArray = jsonElement.asJsonArray
-                parameters.forEachIndexed { index, param ->
-                    if (index < jsonArray.size()) {
-                        val jsonValue = jsonArray.get(index)
-                        val convertedValue = convertJsonToJavaObject(jsonValue, param.type)
-                        parameterMap[index.toString()] = convertedValue
-                        parameterMap[param.name] = convertedValue
-                    }
-                }
-            }
-            
-            return OgnlRootObject(parameterMap)
-        }
-    }
-    
+
     /**
      * 单一原始类型参数
      */
@@ -255,9 +173,9 @@ sealed class ParameterInfo {
  * 方法参数数据类
  */
 data class MethodParameter(
-    val name: String,
-    val type: String,
-    val paramAnnotation: String? = null,
-    val position: Int,
-    val psiParameter: PsiParameter? = null
-)
+    val name: String?,
+    val psiParameter: PsiParameter,
+    val position: Int
+) {
+    val type: String get() = psiParameter.type.canonicalText
+}
