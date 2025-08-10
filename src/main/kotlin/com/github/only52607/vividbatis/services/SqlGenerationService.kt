@@ -2,7 +2,6 @@ package com.github.only52607.vividbatis.services
 
 import com.github.only52607.vividbatis.model.ExtendedRootObject
 import com.github.only52607.vividbatis.model.StatementQualifyId
-import com.github.only52607.vividbatis.util.OgnlRootObject
 import com.github.only52607.vividbatis.util.SqlTemplate
 import com.github.only52607.vividbatis.util.findMybatisMapperXml
 import com.github.only52607.vividbatis.util.findMybatisStatementById
@@ -22,11 +21,11 @@ class SqlGenerationService(private val project: Project) {
 
     fun generateSql(statementQualifyId: StatementQualifyId, parameterJson: String): String {
         val parameterInfo = parameterService.getStatementParameterInfo(statementQualifyId)
-        val rootObject = parameterInfo.createRootObject(gson.fromJson(parameterJson, JsonElement::class.java), gson)
+        val rootObject = parameterInfo.createRootObject(gson.fromJson(parameterJson, JsonElement::class.java))
         return generateSql(statementQualifyId, rootObject)
     }
 
-    fun generateSql(statementQualifyId: StatementQualifyId, rootObject: OgnlRootObject): String {
+    fun generateSql(statementQualifyId: StatementQualifyId, rootObject: Any?): String {
         val template = buildSqlTemplate(statementQualifyId.namespace, statementQualifyId.statementId)
             ?: throw RuntimeException("未找到语句: $statementQualifyId")
         val sql = processXmlTag(

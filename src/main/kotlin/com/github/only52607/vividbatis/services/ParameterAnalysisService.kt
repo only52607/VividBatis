@@ -1,55 +1,57 @@
 package com.github.only52607.vividbatis.services
 
-import com.github.only52607.vividbatis.model.*
-import com.github.only52607.vividbatis.util.*
-import com.google.gson.*
+import com.github.only52607.vividbatis.model.StatementParameterDeclaration
+import com.github.only52607.vividbatis.model.StatementParameterType
+import com.github.only52607.vividbatis.model.StatementQualifyId
+import com.github.only52607.vividbatis.util.TypeUtils
+import com.github.only52607.vividbatis.util.findMybatisMapperXml
+import com.github.only52607.vividbatis.util.findMybatisStatementById
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
-import com.intellij.psi.*
+import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiParameter
 import com.intellij.psi.search.GlobalSearchScope
-import java.lang.reflect.Type
+import com.intellij.psi.util.PsiTypesUtil
+
 
 @Service
 class ParameterAnalysisService(private val project: Project) {
     companion object {
         const val TYPE_IBATIS_PARAM = "org.apache.ibatis.annotations.Param"
     }
-    
-    private val gson = GsonBuilder()
-        .setPrettyPrinting()
-        .registerTypeAdapter(List::class.java, ListTypeAdapter())
-        .registerTypeAdapter(Map::class.java, MapTypeAdapter())
-        .create()
 
-    fun getStatementParameterInfo(statementQualifyId: StatementQualifyId): ParameterInfo {
+    fun getStatementParameterInfo(statementQualifyId: StatementQualifyId): StatementParameterType {
         val parameterTypeInXml = project.findMybatisMapperXml(statementQualifyId.namespace)
             ?.findMybatisStatementById(statementQualifyId.statementId)
             ?.getAttributeValue("parameterType")
         if (parameterTypeInXml?.isNotEmpty() == true) {
-            val paramClass = findPsiClass(parameterTypeInXml)
-            return ParameterInfo.JavaBeanParameter(paramClass, parameterTypeInXml)
+            return StatementParameterType.JavaBean(
+                findPsiClass(parameterTypeInXml)?.let(PsiTypesUtil::getClassType)
+            )
         }
-        val method = findPsiMethod(statementQualifyId.namespace, statementQualifyId.statementId) ?: return ParameterInfo.MapParameter
+        val method = findPsiMethod(statementQualifyId.namespace, statementQualifyId.statementId)
+            ?: return StatementParameterType.Map()
         val parameters = method.parameterList.parameters
         if (parameters.isEmpty()) {
-            return ParameterInfo.MapParameter
+            return StatementParameterType.Map()
         }
         if (parameters.size == 1) {
             val param = parameters[0]
             val paramType = param.type.canonicalText
             return when {
-                TypeUtils.isPrimitiveOrWrapper(paramType) -> ParameterInfo.SinglePrimitiveParameter(paramType)
-                paramType.startsWith("java.util.Map<") -> ParameterInfo.MapParameter
-                else -> ParameterInfo.JavaBeanParameter(findPsiClass(paramType), paramType)
+                TypeUtils.isPrimitive(paramType) -> StatementParameterType.Multiple(
+                    StatementParameterDeclaration(name = getParameterName(param) ?: "_parameter", psiParameter = param)
+                )
+
+                TypeUtils.isMap(paramType) -> StatementParameterType.Map()
+                else -> StatementParameterType.JavaBean(param.type)
             }
         }
-        return ParameterInfo.MultipleParameter(parameters.mapIndexed { index, param ->
-            MethodParameter(
-                name = getParameterName(param),
-                position = index,
-                psiParameter = param
-            )
-        })
+        return StatementParameterType.Multiple(
+            parameters.map { param -> StatementParameterDeclaration(name = getParameterName(param), psiParameter = param) }
+        )
     }
 
     private fun findPsiClass(className: String): PsiClass? {
@@ -68,67 +70,5 @@ class ParameterAnalysisService(private val project: Project) {
     private fun getParameterName(parameter: PsiParameter): String? {
         val paramAnnotation = parameter.annotations.find { it.qualifiedName == TYPE_IBATIS_PARAM }
         return paramAnnotation?.findAttributeValue("value")?.text?.removeSurrounding("\"")
-    }
-    
-    private class ListTypeAdapter : JsonSerializer<List<*>>, JsonDeserializer<List<*>> {
-        override fun serialize(src: List<*>?, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement {
-            val jsonArray = JsonArray()
-            src?.forEach { item -> jsonArray.add(context?.serialize(item)) }
-            return jsonArray
-        }
-        
-        override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): List<*> {
-            val list = mutableListOf<Any>()
-            if (json?.isJsonArray == true) {
-                json.asJsonArray.forEach { element ->
-                    when {
-                        element.isJsonPrimitive -> {
-                            val primitive = element.asJsonPrimitive
-                            when {
-                                primitive.isString -> list.add(primitive.asString)
-                                primitive.isNumber -> list.add(primitive.asNumber)
-                                primitive.isBoolean -> list.add(primitive.asBoolean)
-                            }
-                        }
-                        element.isJsonObject -> list.add(context?.deserialize(element, Map::class.java) ?: emptyMap<String, Any>())
-                        element.isJsonArray -> list.add(context?.deserialize(element, List::class.java) ?: emptyList<Any>())
-                    }
-                }
-            }
-            return list
-        }
-    }
-    
-    private class MapTypeAdapter : JsonSerializer<Map<*, *>>, JsonDeserializer<Map<*, *>> {
-        override fun serialize(src: Map<*, *>?, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement {
-            val jsonObject = JsonObject()
-            src?.forEach { (key, value) -> 
-                if (key is String) {
-                    jsonObject.add(key, context?.serialize(value))
-                }
-            }
-            return jsonObject
-        }
-        
-        override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): Map<*, *> {
-            val map = mutableMapOf<String, Any>()
-            if (json?.isJsonObject == true) {
-                json.asJsonObject.entrySet().forEach { (key, value) ->
-                    when {
-                        value.isJsonPrimitive -> {
-                            val primitive = value.asJsonPrimitive
-                            when {
-                                primitive.isString -> map[key] = primitive.asString
-                                primitive.isNumber -> map[key] = primitive.asNumber
-                                primitive.isBoolean -> map[key] = primitive.asBoolean
-                            }
-                        }
-                        value.isJsonObject -> map[key] = context?.deserialize(value, Map::class.java) ?: emptyMap<String, Any>()
-                        value.isJsonArray -> map[key] = context?.deserialize(value, List::class.java) ?: emptyList<Any>()
-                    }
-                }
-            }
-            return map
-        }
     }
 } 

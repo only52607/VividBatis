@@ -3,50 +3,48 @@ package com.github.only52607.vividbatis.model
 import com.github.only52607.vividbatis.util.*
 import com.google.gson.*
 import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiParameter
+import com.intellij.psi.PsiType
+import com.intellij.psi.util.PsiTypesUtil
 
-sealed class ParameterInfo {
+sealed class StatementParameterType {
+
     abstract fun generateTemplate(): JsonElement
 
-    abstract fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject
+    abstract fun createRootObject(jsonElement: JsonElement): Any?
 
-    object MapParameter : ParameterInfo() {
+    class Map(private val valueType: PsiType? = null) : StatementParameterType() {
         override fun generateTemplate(): JsonElement {
             return JsonObject()
         }
         
-        override fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
-            val parameterMap = mutableMapOf<String, Any>()
-            
+        override fun createRootObject(jsonElement: JsonElement): Any? {
             if (jsonElement.isJsonObject) {
-                jsonElement.asJsonObject.entrySet().forEach { (key, value) ->
-                    val convertedValue = convertJsonToJavaObject(value)
-                    parameterMap[key] = convertedValue
-                }
+                return JsonMapRootObject(jsonElement.asJsonObject, valueType)
             }
-            
-            return OgnlRootObject(parameterMap)
+            return null
         }
     }
 
-    data class MultipleParameter(val parameters: List<MethodParameter>) : ParameterInfo() {
+    data class Multiple(val declarations: List<StatementParameterDeclaration>) : StatementParameterType() {
+        constructor(vararg declarations: StatementParameterDeclaration) : this(declarations.toList())
+
         override fun generateTemplate(): JsonElement {
             val jsonObject = JsonObject()
-            parameters.forEach { param ->
-                val paramName = param.name ?: "param${param.position}"
+            declarations.forEachIndexed { idx, param ->
+                val paramName = param.name ?: "param${idx}"
                 val defaultValue = TypeUtils.generateDefaultValue(param.type)
                 jsonObject.add(paramName, defaultValue)
             }
             return jsonObject
         }
         
-        override fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
+        override fun createRootObject(jsonElement: JsonElement): Any {
             val parameterMap = mutableMapOf<String, Any>()
             
             if (jsonElement.isJsonObject) {
                 val jsonObject = jsonElement.asJsonObject
-                parameters.forEach { param ->
-                    val paramName = param.name ?: "param${param.position}"
+                declarations.forEachIndexed { idx, param ->
+                    val paramName = param.name ?: "param${idx}"
                     val jsonValue = jsonObject.get(paramName)
                     if (jsonValue != null) {
                         val convertedValue = convertJsonToJavaObject(jsonValue, param.type)
@@ -55,24 +53,25 @@ sealed class ParameterInfo {
                 }
             }
             
-            return OgnlRootObject(parameterMap)
+            return parameterMap
         }
     }
 
-    data class JavaBeanParameter(
-        val parameterClass: PsiClass?,
-        val parameterTypeString: String?
-    ) : ParameterInfo() {
+    data class JavaBean(
+        val psiType: PsiType?
+    ) : StatementParameterType() {
+        val psiClass: PsiClass? = psiType?.let { PsiTypesUtil.getPsiClass(it) }
+
         override fun generateTemplate(): JsonElement {
-            if (parameterClass == null) return JsonObject()
-            return JavaClassAnalyzer().analyzeClass(parameterClass)
+            if (psiClass == null) return JsonObject()
+            return JavaClassAnalyzer().analyzeClass(psiClass)
         }
         
-        override fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
-            val convertedObject = convertJsonToJavaObject(jsonElement, parameterClass?.qualifiedName)
+        override fun createRootObject(jsonElement: JsonElement): Any {
+            val convertedObject = convertJsonToJavaObject(jsonElement, psiClass?.qualifiedName)
             val parameterMap = mutableMapOf<String, Any>()
             
-            if (convertedObject is Map<*, *>) {
+            if (convertedObject is kotlin.collections.Map<*, *>) {
                 convertedObject.forEach { (key, value) ->
                     if (key is String && value != null) {
                         parameterMap[key] = value
@@ -82,25 +81,10 @@ sealed class ParameterInfo {
                 parameterMap["root"] = convertedObject
             }
             
-            return OgnlRootObject(parameterMap)
+            return parameterMap
         }
     }
 
-    data class SinglePrimitiveParameter(val parameterTypeString: String?) : ParameterInfo() {
-        override fun generateTemplate(): JsonElement {
-            if (parameterTypeString == null) return JsonObject()
-            val defaultValue = TypeUtils.generateDefaultValue(parameterTypeString)
-            return defaultValue
-        }
-        
-        override fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
-            val convertedValue = convertJsonToJavaObject(jsonElement, parameterTypeString)
-            val parameterMap = mapOf("value" to convertedValue)
-            
-            return OgnlRootObject(parameterMap)
-        }
-    }
-    
     companion object {
         fun convertJsonToJavaObject(jsonElement: JsonElement, expectedType: String? = null): Any {
             return when {
@@ -144,10 +128,3 @@ sealed class ParameterInfo {
     }
 }
 
-data class MethodParameter(
-    val name: String?,
-    val psiParameter: PsiParameter,
-    val position: Int
-) {
-    val type: String get() = psiParameter.type.canonicalText
-}

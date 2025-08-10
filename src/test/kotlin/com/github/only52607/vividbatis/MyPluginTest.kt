@@ -1,18 +1,17 @@
 package com.github.only52607.vividbatis
 
 import com.github.only52607.vividbatis.model.StatementQualifyId
+import com.github.only52607.vividbatis.services.ParameterAnalysisService
+import com.github.only52607.vividbatis.services.SqlGenerationService
+import com.github.only52607.vividbatis.util.SqlTemplate
+import com.github.only52607.vividbatis.util.findMybatisMapperXml
+import com.github.only52607.vividbatis.util.findMybatisStatementById
+import com.google.gson.Gson
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.psi.xml.XmlFile
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.PsiErrorElementUtil
-import com.github.only52607.vividbatis.services.ParameterAnalysisService
-import com.github.only52607.vividbatis.services.SqlGenerationService
-import com.github.only52607.vividbatis.util.OgnlRootObject
-import com.github.only52607.vividbatis.util.SqlTemplate
-import com.github.only52607.vividbatis.util.findMybatisMapperXml
-import com.github.only52607.vividbatis.util.findMybatisStatementById
-import com.google.gson.Gson
 import java.io.File
 
 @TestDataPath("\$CONTENT_ROOT/src/test/testData")
@@ -75,11 +74,10 @@ class MyPluginTest : BasePlatformTestCase() {
         
         template?.let {
             val generator = SqlGenerationService(project)
-            val parameters = mapOf(
+            val rootObject = mapOf(
                 "name" to "test",
                 "status" to "active"
             )
-            val rootObject = OgnlRootObject(parameters)
             
             try {
                 val sql = generator.generateSql(StatementQualifyId(it.namespace, it.statementId), rootObject)

@@ -18,16 +18,21 @@ object TypeUtils {
         "java.util.Collection"
     )
 
-    fun isPrimitiveOrWrapper(type: String): Boolean = type in PRIMITIVE_TYPES
+    fun isPrimitive(type: String): Boolean = type in PRIMITIVE_TYPES
     
     fun isCollectionType(type: String): Boolean {
         return type in COLLECTION_TYPES || 
                COLLECTION_TYPES.any { collectionType -> type.startsWith("$collectionType<") }
     }
 
+    fun isMap(type: String): Boolean {
+        return type == "java.util.Map" || type == "java.util.HashMap" ||
+               type.startsWith("java.util.Map<") || type.startsWith("java.util.HashMap<")
+    }
+
     fun generateDefaultValue(typeName: String): JsonPrimitive {
         return when {
-            typeName == "java.lang.String" -> JsonPrimitive("示例字符串")
+            typeName == "string" || typeName == "java.lang.String" -> JsonPrimitive("示例字符串")
             typeName == "int" || typeName == "java.lang.Integer" -> JsonPrimitive(1)
             typeName == "long" || typeName == "java.lang.Long" -> JsonPrimitive(1L)
             typeName == "double" || typeName == "java.lang.Double" -> JsonPrimitive(1.0)
