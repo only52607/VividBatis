@@ -41,9 +41,7 @@ fun XmlFile.findSqlFragmentByRefId(refId: String): XmlTag? {
         val namespace = refId.substring(0, dotIndex)
         val fragmentId = refId.substring(dotIndex + 1)
         val targetXmlFile = this.project.findMybatisMapperXml(namespace)
-        if (targetXmlFile != null) {
-            targetXmlFile.findSqlFragmentById(fragmentId)
-        } else null
+        targetXmlFile?.findSqlFragmentById(fragmentId)
     } else {
         this.findSqlFragmentById(refId)
     }

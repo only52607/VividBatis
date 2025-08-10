@@ -21,15 +21,15 @@ class ParameterAnalysisService(private val project: Project) {
         .registerTypeAdapter(Map::class.java, MapTypeAdapter())
         .create()
 
-    fun getStatementParameterInfo(namespace: String, statementId: String): ParameterInfo {
-        val parameterTypeInXml = project.findMybatisMapperXml(namespace)
-            ?.findMybatisStatementById(statementId)
+    fun getStatementParameterInfo(statementQualifyId: StatementQualifyId): ParameterInfo {
+        val parameterTypeInXml = project.findMybatisMapperXml(statementQualifyId.namespace)
+            ?.findMybatisStatementById(statementQualifyId.statementId)
             ?.getAttributeValue("parameterType")
         if (parameterTypeInXml?.isNotEmpty() == true) {
             val paramClass = findPsiClass(parameterTypeInXml)
             return ParameterInfo.JavaBeanParameter(paramClass, parameterTypeInXml)
         }
-        val method = findPsiMethod(namespace, statementId) ?: return ParameterInfo.MapParameter
+        val method = findPsiMethod(statementQualifyId.namespace, statementQualifyId.statementId) ?: return ParameterInfo.MapParameter
         val parameters = method.parameterList.parameters
         if (parameters.isEmpty()) {
             return ParameterInfo.MapParameter
@@ -51,15 +51,6 @@ class ParameterAnalysisService(private val project: Project) {
             )
         })
     }
-    
-    fun buildRootObject(json: String, parameterInfo: ParameterInfo): OgnlRootObject {
-        return buildRootObject(gson.fromJson(json, JsonElement::class.java), parameterInfo)
-    }
-
-    fun buildRootObject(json: JsonElement, parameterInfo: ParameterInfo): OgnlRootObject {
-        val jsonElement = gson.fromJson(json, JsonElement::class.java)
-        return parameterInfo.parseJson(jsonElement, gson)
-    }
 
     private fun findPsiClass(className: String): PsiClass? {
         return JavaPsiFacade.getInstance(project).findClass(className, GlobalSearchScope.allScope(project))
@@ -74,11 +65,6 @@ class ParameterAnalysisService(private val project: Project) {
         return findPsiMethod(mapperInterface, methodName)
     }
 
-    private fun getParamAnnotationValue(parameter: PsiParameter): String? {
-        val paramAnnotation = parameter.annotations.find { it.qualifiedName == TYPE_IBATIS_PARAM }
-        return paramAnnotation?.findAttributeValue("value")?.text?.removeSurrounding("\"")
-    }
-    
     private fun getParameterName(parameter: PsiParameter): String? {
         val paramAnnotation = parameter.annotations.find { it.qualifiedName == TYPE_IBATIS_PARAM }
         return paramAnnotation?.findAttributeValue("value")?.text?.removeSurrounding("\"")

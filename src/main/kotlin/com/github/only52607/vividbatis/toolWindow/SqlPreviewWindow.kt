@@ -2,6 +2,7 @@ package com.github.only52607.vividbatis.toolWindow
 
 import com.github.only52607.vividbatis.message.SqlStatementSelectedEvent
 import com.github.only52607.vividbatis.message.SqlStatementSelectedListener
+import com.github.only52607.vividbatis.model.StatementQualifyId
 import com.github.only52607.vividbatis.services.ParameterAnalysisService
 import com.github.only52607.vividbatis.services.SqlGenerationService
 import com.google.gson.Gson
@@ -27,7 +28,7 @@ import javax.swing.JScrollPane
 class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListener {
 
     private val parameterAnalysisService = project.getService(ParameterAnalysisService::class.java)
-    private val sqlGenerationService = SqlGenerationService.getInstance(project)
+    private val sqlGenerationService = project.getService(SqlGenerationService::class.java)
 
     private val statementInfoLabel = JBLabel("请选择一个 SQL 语句标签")
     private val parameterEditor = createJsonEditor()
@@ -117,8 +118,7 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
                 showSqlEditor()
                 val parameterJson = parameterEditor.text
                 val generatedSql = sqlGenerationService.generateSql(
-                    event.namespace,
-                    event.statementId,
+                    StatementQualifyId(event.namespace, event.statementId),
                     parameterJson
                 )
                 sqlEditor.text = generatedSql
@@ -312,9 +312,8 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
         try {
             hideError()
             parameterEditor.text = parameterAnalysisService.getStatementParameterInfo(
-                event.namespace,
-                event.statementId
-            )?.generateTemplate()?.let {
+                StatementQualifyId(event.namespace, event.statementId),
+            ).generateTemplate().let {
                 Gson().toJson(it)
             } ?: "{}"
             generateButton.isEnabled = true

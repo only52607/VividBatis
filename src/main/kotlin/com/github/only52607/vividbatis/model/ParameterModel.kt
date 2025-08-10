@@ -18,7 +18,7 @@ sealed class ParameterInfo {
     /**
      * 解析JSON参数并构建OgnlRootObject
      */
-    abstract fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject
+    abstract fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject
     
     /**
      * Map类型参数
@@ -28,7 +28,7 @@ sealed class ParameterInfo {
             return JsonObject()
         }
         
-        override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
+        override fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
             val parameterMap = mutableMapOf<String, Any>()
             
             if (jsonElement.isJsonObject) {
@@ -56,7 +56,7 @@ sealed class ParameterInfo {
             return jsonObject
         }
         
-        override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
+        override fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
             val parameterMap = mutableMapOf<String, Any>()
             
             if (jsonElement.isJsonObject) {
@@ -87,7 +87,7 @@ sealed class ParameterInfo {
             return JavaClassAnalyzer().analyzeClass(parameterClass)
         }
         
-        override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
+        override fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
             val convertedObject = convertJsonToJavaObject(jsonElement, parameterClass?.qualifiedName)
             val parameterMap = mutableMapOf<String, Any>()
             
@@ -115,7 +115,7 @@ sealed class ParameterInfo {
             return defaultValue
         }
         
-        override fun parseJson(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
+        override fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject {
             val convertedValue = convertJsonToJavaObject(jsonElement, parameterTypeString)
             val parameterMap = mapOf("value" to convertedValue)
             

@@ -1,5 +1,6 @@
 package com.github.only52607.vividbatis
 
+import com.github.only52607.vividbatis.model.StatementQualifyId
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.psi.xml.XmlFile
 import com.intellij.testFramework.TestDataPath
@@ -7,7 +8,6 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.PsiErrorElementUtil
 import com.github.only52607.vividbatis.services.ParameterAnalysisService
 import com.github.only52607.vividbatis.services.SqlGenerationService
-import com.github.only52607.vividbatis.util.MybatisSqlGenerator
 import com.github.only52607.vividbatis.util.OgnlRootObject
 import com.github.only52607.vividbatis.util.SqlTemplate
 import com.github.only52607.vividbatis.util.findMybatisMapperXml
@@ -39,15 +39,15 @@ class MyPluginTest : BasePlatformTestCase() {
         val parameterAnalysisService = project.getService(ParameterAnalysisService::class.java)
         assertNotNull(parameterAnalysisService)
         val json = parameterAnalysisService.getStatementParameterInfo(
-            "test.namespace", "testStatement"
-        )?.generateTemplate()?.let {
+            StatementQualifyId("test.namespace", "testStatement")
+        ).generateTemplate().let {
             Gson().toJson(it)
         } ?: "{}"
         assertNotNull(json)
     }
     
     fun testSqlGenerationService() {
-        val sqlGenerationService = SqlGenerationService.getInstance(project)
+        val sqlGenerationService = project.getService(SqlGenerationService::class.java)
         assertNotNull(sqlGenerationService)
     }
 
@@ -74,7 +74,7 @@ class MyPluginTest : BasePlatformTestCase() {
         assertNotNull("Should find SQL template", template)
         
         template?.let {
-            val generator = MybatisSqlGenerator()
+            val generator = SqlGenerationService(project)
             val parameters = mapOf(
                 "name" to "test",
                 "status" to "active"
@@ -82,7 +82,7 @@ class MyPluginTest : BasePlatformTestCase() {
             val rootObject = OgnlRootObject(parameters)
             
             try {
-                val sql = generator.generateSql(it, rootObject)
+                val sql = generator.generateSql(StatementQualifyId(it.namespace, it.statementId), rootObject)
                 assertNotNull("Generated SQL should not be null", sql)
                 assertTrue("SQL should contain included columns", sql.contains("id, name, email, age, status, created_time"))
                 assertTrue("SQL should contain WHERE clause", sql.contains("WHERE"))
