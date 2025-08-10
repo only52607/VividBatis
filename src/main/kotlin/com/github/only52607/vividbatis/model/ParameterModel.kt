@@ -5,24 +5,11 @@ import com.google.gson.*
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiParameter
 
-/**
- * 参数信息密封类，封装了不同类型参数的处理逻辑
- */
 sealed class ParameterInfo {
-    
-    /**
-     * 生成默认参数模板
-     */
     abstract fun generateTemplate(): JsonElement
-    
-    /**
-     * 解析JSON参数并构建OgnlRootObject
-     */
+
     abstract fun createRootObject(jsonElement: JsonElement, gson: Gson): OgnlRootObject
-    
-    /**
-     * Map类型参数
-     */
+
     object MapParameter : ParameterInfo() {
         override fun generateTemplate(): JsonElement {
             return JsonObject()
@@ -41,10 +28,7 @@ sealed class ParameterInfo {
             return OgnlRootObject(parameterMap)
         }
     }
-    
-    /**
-     * 注解参数类型
-     */
+
     data class MultipleParameter(val parameters: List<MethodParameter>) : ParameterInfo() {
         override fun generateTemplate(): JsonElement {
             val jsonObject = JsonObject()
@@ -74,10 +58,7 @@ sealed class ParameterInfo {
             return OgnlRootObject(parameterMap)
         }
     }
-    
-    /**
-     * Java Bean参数类型
-     */
+
     data class JavaBeanParameter(
         val parameterClass: PsiClass?,
         val parameterTypeString: String?
@@ -105,9 +86,6 @@ sealed class ParameterInfo {
         }
     }
 
-    /**
-     * 单一原始类型参数
-     */
     data class SinglePrimitiveParameter(val parameterTypeString: String?) : ParameterInfo() {
         override fun generateTemplate(): JsonElement {
             if (parameterTypeString == null) return JsonObject()
@@ -124,9 +102,6 @@ sealed class ParameterInfo {
     }
     
     companion object {
-        /**
-         * 将JSON转换为Java对象的通用方法
-         */
         fun convertJsonToJavaObject(jsonElement: JsonElement, expectedType: String? = null): Any {
             return when {
                 jsonElement.isJsonNull -> ""
@@ -169,9 +144,6 @@ sealed class ParameterInfo {
     }
 }
 
-/**
- * 方法参数数据类
- */
 data class MethodParameter(
     val name: String?,
     val psiParameter: PsiParameter,
