@@ -12,6 +12,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiParameter
+import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTypesUtil
 
@@ -37,32 +38,23 @@ class ParameterAnalysisService(private val project: Project) {
         if (parameters.isEmpty()) {
             return StatementParameterType.Map()
         }
-        if (parameters.size == 1) {
+        if (parameters.size == 1 && findParameterName(parameters[0]) == null) {
             val param = parameters[0]
             val paramType = param.type.canonicalText
             return when {
+                param.type is PsiPrimitiveType -> StatementParameterType.JavaBean(param.type)
                 TypeUtils.isPrimitive(paramType) -> StatementParameterType.Multiple(
                     StatementParameterDeclaration(name = findParameterName(param) ?: "_parameter", psiParameter = param)
                 )
 
-                TypeUtils.isMap(paramType) -> {
-                    val parameterName = findParameterName(param)
-                    if (parameterName != null) {
-                        StatementParameterType.Multiple(
-                            StatementParameterDeclaration(name = parameterName, psiParameter = param)
-                        )
-                    } else {
-                        StatementParameterType.Map()
-                    }
-                }
-
+                TypeUtils.isMap(paramType) -> StatementParameterType.Map()
                 else -> StatementParameterType.JavaBean(param.type)
             }
         }
         return StatementParameterType.Multiple(
             parameters.map { param ->
                 StatementParameterDeclaration(
-                    name = findParameterName(param),
+                    name = findParameterName(param) ?: if (parameters.size == 1) "_parameter" else null,
                     psiParameter = param
                 )
             }
