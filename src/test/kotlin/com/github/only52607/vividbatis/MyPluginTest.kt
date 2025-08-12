@@ -3,7 +3,7 @@ package com.github.only52607.vividbatis
 import com.github.only52607.vividbatis.model.StatementQualifyId
 import com.github.only52607.vividbatis.services.ParameterAnalysisService
 import com.github.only52607.vividbatis.services.SqlGenerationService
-import com.github.only52607.vividbatis.util.SqlTemplate
+import com.github.only52607.vividbatis.services.SqlTemplate
 import com.github.only52607.vividbatis.util.findMybatisMapperXml
 import com.github.only52607.vividbatis.util.findMybatisStatementById
 import com.google.gson.Gson

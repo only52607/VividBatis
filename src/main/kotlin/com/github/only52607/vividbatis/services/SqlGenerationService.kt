@@ -2,7 +2,6 @@ package com.github.only52607.vividbatis.services
 
 import com.github.only52607.vividbatis.model.ExtendedRootObject
 import com.github.only52607.vividbatis.model.StatementQualifyId
-import com.github.only52607.vividbatis.util.SqlTemplate
 import com.github.only52607.vividbatis.util.findMybatisMapperXml
 import com.github.only52607.vividbatis.util.findMybatisStatementById
 import com.github.only52607.vividbatis.util.findSqlFragmentByRefId
@@ -10,9 +9,18 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
+import com.intellij.psi.xml.XmlFile
 import com.intellij.psi.xml.XmlTag
 import ognl.Ognl
 import ognl.OgnlContext
+
+data class SqlTemplate(
+    val namespace: String,
+    val statementId: String,
+    val statementType: String,
+    val mapperFile: XmlFile,
+    val project: Project
+)
 
 @Service
 class SqlGenerationService(private val project: Project) {

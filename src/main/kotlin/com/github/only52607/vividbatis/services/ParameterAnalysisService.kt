@@ -3,16 +3,11 @@ package com.github.only52607.vividbatis.services
 import com.github.only52607.vividbatis.model.StatementParameterDeclaration
 import com.github.only52607.vividbatis.model.StatementParameterType
 import com.github.only52607.vividbatis.model.StatementQualifyId
-import com.github.only52607.vividbatis.util.TypeUtils
 import com.github.only52607.vividbatis.util.findMybatisMapperXml
 import com.github.only52607.vividbatis.util.findMybatisStatementById
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
-import com.intellij.psi.JavaPsiFacade
-import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiMethod
-import com.intellij.psi.PsiParameter
-import com.intellij.psi.PsiPrimitiveType
+import com.intellij.psi.*
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTypesUtil
 
@@ -40,15 +35,17 @@ class ParameterAnalysisService(private val project: Project) {
         }
         if (parameters.size == 1 && findParameterName(parameters[0]) == null) {
             val param = parameters[0]
-            val paramType = param.type.canonicalText
-            return when {
-                param.type is PsiPrimitiveType -> StatementParameterType.JavaBean(param.type)
-                TypeUtils.isPrimitive(paramType) -> StatementParameterType.Multiple(
-                    StatementParameterDeclaration(name = findParameterName(param) ?: "_parameter", psiParameter = param)
+            val type = param.type
+            when(type) {
+                is PsiPrimitiveType -> return StatementParameterType.Multiple(
+                    StatementParameterDeclaration(name = "_parameter", psiParameter = param)
                 )
-
-                TypeUtils.isMap(paramType) -> StatementParameterType.Map()
-                else -> StatementParameterType.JavaBean(param.type)
+                is PsiClassType -> {
+                    return when (type.className) {
+                        "java.util.Map", "java.util.HashMap" -> StatementParameterType.Map(type.parameters.getOrNull(1))
+                        else -> StatementParameterType.JavaBean(param.type)
+                    }
+                }
             }
         }
         return StatementParameterType.Multiple(
