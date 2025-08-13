@@ -11,18 +11,18 @@ object PsiTypeToJsonConverter {
 
     fun convert(psiType: PsiType): JsonElement = when {
         psiType is PsiArrayType -> convertArray(psiType)
-        psiType.equalsToText("boolean") || psiType.equalsToText("java.lang.Boolean") -> JsonPrimitive(true)
-        psiType.equalsToText("byte") || psiType.equalsToText("java.lang.Byte") -> JsonPrimitive(1)
-        psiType.equalsToText("short") || psiType.equalsToText("java.lang.Short") -> JsonPrimitive(1)
-        psiType.equalsToText("int") || psiType.equalsToText("java.lang.Integer") -> JsonPrimitive(1)
-        psiType.equalsToText("long") || psiType.equalsToText("java.lang.Long") -> JsonPrimitive(1L)
-        psiType.equalsToText("float") || psiType.equalsToText("java.lang.Float") -> JsonPrimitive(1.0f)
-        psiType.equalsToText("double") || psiType.equalsToText("java.lang.Double") -> JsonPrimitive(1.0)
-        psiType.equalsToText("char") || psiType.equalsToText("java.lang.Character") -> JsonPrimitive("A")
-        psiType.equalsToText("java.lang.String") -> JsonPrimitive("string")
-        psiType.equalsToText("java.util.Date") -> JsonPrimitive("2023-01-01T00:00:00Z")
-        psiType.equalsToText("java.time.LocalDateTime") -> JsonPrimitive("2023-01-01T00:00:00")
-        psiType.equalsToText("java.time.LocalDate") -> JsonPrimitive("2023-01-01")
+        psiType.equalsToText("boolean") || psiType.equalsToText(CommonClassNames.JAVA_LANG_BOOLEAN) -> JsonPrimitive(true)
+        psiType.equalsToText("byte") || psiType.equalsToText(CommonClassNames.JAVA_LANG_BYTE) -> JsonPrimitive(1)
+        psiType.equalsToText("short") || psiType.equalsToText(CommonClassNames.JAVA_LANG_SHORT) -> JsonPrimitive(1)
+        psiType.equalsToText("int") || psiType.equalsToText(CommonClassNames.JAVA_LANG_INTEGER) -> JsonPrimitive(1)
+        psiType.equalsToText("long") || psiType.equalsToText(CommonClassNames.JAVA_LANG_LONG) -> JsonPrimitive(1L)
+        psiType.equalsToText("float") || psiType.equalsToText(CommonClassNames.JAVA_LANG_FLOAT) -> JsonPrimitive(1.0f)
+        psiType.equalsToText("double") || psiType.equalsToText(CommonClassNames.JAVA_LANG_DOUBLE) -> JsonPrimitive(1.0)
+        psiType.equalsToText("char") || psiType.equalsToText(CommonClassNames.JAVA_LANG_CHARACTER) -> JsonPrimitive("A")
+        psiType.equalsToText(CommonClassNames.JAVA_LANG_STRING) -> JsonPrimitive("string")
+        psiType.equalsToText(CommonClassNames.JAVA_UTIL_DATE) -> JsonPrimitive("2025-01-01T00:00:00Z")
+        psiType.equalsToText(CommonClassNames.JAVA_TIME_LOCAL_DATE_TIME) -> JsonPrimitive("2025-01-01T00:00:00")
+        psiType.equalsToText(CommonClassNames.JAVA_TIME_LOCAL_DATE) -> JsonPrimitive("2025-01-01")
         psiType.equalsToText("java.math.BigDecimal") -> JsonPrimitive("100.00")
         isCollection(psiType) -> convertCollection(psiType)
         isMap(psiType) -> convertMap(psiType)
@@ -59,8 +59,8 @@ object PsiTypeToJsonConverter {
             ?: return JsonObject()
 
         val keyString = when {
-            keyType?.equalsToText("java.lang.String") == true -> "key"
-            keyType?.equalsToText("int") == true || keyType?.equalsToText("java.lang.Integer") == true -> "1"
+            keyType?.equalsToText(CommonClassNames.JAVA_LANG_STRING) == true -> "key"
+            keyType?.equalsToText("int") == true || keyType?.equalsToText(CommonClassNames.JAVA_LANG_INTEGER) == true -> "1"
             else -> "key"
         }
 
@@ -93,12 +93,12 @@ object PsiTypeToJsonConverter {
     private fun isCollection(psiType: PsiType): Boolean {
         val psiClass = PsiTypesUtil.getPsiClass(psiType) ?: return false
         return psiClass.qualifiedName?.let { name ->
-            name.startsWith("java.util.List") ||
-                    name.startsWith("java.util.Set") ||
-                    name.startsWith("java.util.Collection") ||
-                    name == "java.util.ArrayList" ||
-                    name == "java.util.LinkedList" ||
-                    name == "java.util.HashSet" ||
+            name.startsWith(CommonClassNames.JAVA_UTIL_LIST) ||
+                    name.startsWith(CommonClassNames.JAVA_UTIL_SET) ||
+                    name.startsWith(CommonClassNames.JAVA_UTIL_COLLECTION) ||
+                    name == CommonClassNames.JAVA_UTIL_ARRAY_LIST ||
+                    name == CommonClassNames.JAVA_UTIL_LINKED_LIST ||
+                    name == CommonClassNames.JAVA_UTIL_HASH_SET ||
                     name == "java.util.TreeSet"
         } ?: false
     }
@@ -106,10 +106,10 @@ object PsiTypeToJsonConverter {
     private fun isMap(psiType: PsiType): Boolean {
         val psiClass = PsiTypesUtil.getPsiClass(psiType) ?: return false
         return psiClass.qualifiedName?.let { name ->
-            name.startsWith("java.util.Map") ||
-                    name == "java.util.HashMap" ||
+            name.startsWith(CommonClassNames.JAVA_UTIL_MAP) ||
+                    name == CommonClassNames.JAVA_UTIL_HASH_MAP ||
                     name == "java.util.TreeMap" ||
-                    name == "java.util.LinkedHashMap"
+                    name == CommonClassNames.JAVA_UTIL_LINKED_HASH_MAP
         } ?: false
     }
 }

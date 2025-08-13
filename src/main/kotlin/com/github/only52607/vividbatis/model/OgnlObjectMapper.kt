@@ -1,17 +1,18 @@
 package com.github.only52607.vividbatis.model
 
 import com.google.gson.JsonElement
+import com.intellij.psi.CommonClassNames
 import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.PsiType
 
 object OgnlObjectMapper {
-    fun asOgnlObject(jsonElement: JsonElement, expectedType: PsiType?): Any? {
+    fun convertToOgnlObject(jsonElement: JsonElement, expectedType: PsiType?): Any? {
         return jsonElement.asOgnlObject(expectedType)
     }
 
-    fun asOgnlMap(jsonElement: JsonElement, expectedType: PsiType?): Any {
+    fun convertToOgnlMap(jsonElement: JsonElement, expectedType: PsiType?): Any {
         return jsonElement.asOgnlMap(expectedType)
     }
 
@@ -55,18 +56,18 @@ object OgnlObjectMapper {
 
             is PsiClassType -> {
                 when(expectedType.className) {
-                    "java.lang.String" -> return asString
-                    "java.lang.Character" -> return asString.toCharArray()[0]
-                    "java.lang.Integer" -> return asInt
-                    "java.lang.Long" -> return asLong
-                    "java.lang.Float" -> return asFloat
-                    "java.lang.Double" -> return asDouble
-                    "java.lang.Byte" -> return asByte
-                    "java.lang.Short" -> return asShort
-                    "java.lang.Boolean" -> return asBoolean
-                    "java.lang.List", "java.util.ArrayList" -> return asOgnlList(expectedType.parameters.firstOrNull())
-                    "java.lang.Set", "java.util.HashSet" -> return asOgnlSet(expectedType.parameters.firstOrNull())
-                    "java.lang.Map", "java.util.HashMap" -> return asOgnlMap(expectedType.parameters.getOrNull(1))
+                    CommonClassNames.JAVA_LANG_STRING -> return asString
+                    CommonClassNames.JAVA_LANG_CHARACTER -> return asString.toCharArray()[0]
+                    CommonClassNames.JAVA_LANG_INTEGER -> return asInt
+                    CommonClassNames.JAVA_LANG_LONG -> return asLong
+                    CommonClassNames.JAVA_LANG_FLOAT -> return asFloat
+                    CommonClassNames.JAVA_LANG_DOUBLE -> return asDouble
+                    CommonClassNames.JAVA_LANG_BYTE -> return asByte
+                    CommonClassNames.JAVA_LANG_SHORT -> return asShort
+                    CommonClassNames.JAVA_LANG_BOOLEAN -> return asBoolean
+                    CommonClassNames.JAVA_UTIL_LIST, CommonClassNames.JAVA_UTIL_ARRAY_LIST -> return asOgnlList(expectedType.parameters.firstOrNull())
+                    CommonClassNames.JAVA_UTIL_SET, CommonClassNames.JAVA_UTIL_HASH_SET -> return asOgnlSet(expectedType.parameters.firstOrNull())
+                    CommonClassNames.JAVA_UTIL_MAP, CommonClassNames.JAVA_UTIL_HASH_MAP -> return asOgnlMap(expectedType.parameters.getOrNull(1))
                 }
             }
         }

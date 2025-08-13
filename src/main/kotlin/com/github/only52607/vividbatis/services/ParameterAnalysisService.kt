@@ -10,6 +10,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.*
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTypesUtil
+import com.intellij.psi.CommonClassNames
 
 
 @Service
@@ -42,7 +43,7 @@ class ParameterAnalysisService(private val project: Project) {
                 )
                 is PsiClassType -> {
                     return when (type.className) {
-                        "java.util.Map", "java.util.HashMap" -> StatementParameterType.Map(type.parameters.getOrNull(1))
+                        CommonClassNames.JAVA_UTIL_MAP, CommonClassNames.JAVA_UTIL_HASH_MAP -> StatementParameterType.Map(type.parameters.getOrNull(1))
                         else -> StatementParameterType.JavaBean(param.type)
                     }
                 }

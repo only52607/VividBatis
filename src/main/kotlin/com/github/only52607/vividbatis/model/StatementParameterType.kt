@@ -17,7 +17,7 @@ sealed class StatementParameterType {
         }
 
         override fun createRootObject(jsonElement: JsonElement): Any {
-            return OgnlObjectMapper.asOgnlMap(jsonElement, valueType)
+            return OgnlObjectMapper.convertToOgnlMap(jsonElement, valueType)
         }
     }
 
@@ -42,7 +42,7 @@ sealed class StatementParameterType {
                     val paramName = param.name ?: "param${idx}"
                     val jsonValue = jsonObject.get(paramName)
                     if (jsonValue != null) {
-                        parameterMap[paramName] = OgnlObjectMapper.asOgnlObject(jsonElement, param.psiParameter.type)
+                        parameterMap[paramName] = OgnlObjectMapper.convertToOgnlObject(jsonElement, param.psiParameter.type)
                     }
                 }
             }
@@ -60,7 +60,7 @@ sealed class StatementParameterType {
         }
 
         override fun createRootObject(jsonElement: JsonElement): Any? {
-            return OgnlObjectMapper.asOgnlObject(jsonElement, psiType)
+            return OgnlObjectMapper.convertToOgnlObject(jsonElement, psiType)
         }
     }
 }
