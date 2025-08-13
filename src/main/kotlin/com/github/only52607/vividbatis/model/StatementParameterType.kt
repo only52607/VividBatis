@@ -1,12 +1,9 @@
 package com.github.only52607.vividbatis.model
 
-import com.github.only52607.vividbatis.util.JavaClassAnalyzer
-import com.github.only52607.vividbatis.util.TypeUtils
+import PsiTypeToJsonConverter
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiType
-import com.intellij.psi.util.PsiTypesUtil
 
 sealed class StatementParameterType {
 
@@ -31,8 +28,7 @@ sealed class StatementParameterType {
             val jsonObject = JsonObject()
             declarations.forEachIndexed { idx, param ->
                 val paramName = param.name ?: "param${idx}"
-                val defaultValue = TypeUtils.generateDefaultValue(param.type)
-                jsonObject.add(paramName, defaultValue)
+                jsonObject.add(paramName, PsiTypeToJsonConverter.convert(param.psiParameter.type))
             }
             return jsonObject
         }
@@ -58,11 +54,9 @@ sealed class StatementParameterType {
     data class JavaBean(
         val psiType: PsiType?
     ) : StatementParameterType() {
-        val psiClass: PsiClass? = psiType?.let { PsiTypesUtil.getPsiClass(it) }
-
         override fun generateTemplate(): JsonElement {
-            if (psiClass == null) return JsonObject()
-            return JavaClassAnalyzer().analyzeClass(psiClass)
+            if (psiType == null) return JsonObject()
+            return PsiTypeToJsonConverter.convert(psiType)
         }
 
         override fun createRootObject(jsonElement: JsonElement): Any? {
