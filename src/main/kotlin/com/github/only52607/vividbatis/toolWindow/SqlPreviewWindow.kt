@@ -20,37 +20,79 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.content.ContentFactory
-import java.awt.*
+import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
+import java.awt.Dimension
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.JButton
 import javax.swing.JPanel
-import javax.swing.JScrollPane
 
 class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListener {
     class Factory : ToolWindowFactory, DumbAware {
         override fun shouldBeAvailable(project: Project) = true
 
         override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-            val sqlPreviewWindow = SqlPreviewWindow(project)
-            val content = ContentFactory.getInstance().createContent(
-                sqlPreviewWindow.getContent(),
-                "SQL 预览",
-                false
-            )
-            toolWindow.contentManager.addContent(content)
-            toolWindow.setToHideOnEmptyContent(false)
+            toolWindow.apply {
+                contentManager.addContent(
+                    ContentFactory.getInstance().createContent(
+                        SqlPreviewWindow(project).getContent(),
+                        "SQL 预览",
+                        false
+                    )
+                )
+                toolWindow.setToHideOnEmptyContent(false)
+            }
         }
     }
 
     private val statementInfoLabel = JBLabel("请选择一个 SQL 语句标签")
-    private val parameterEditor = createJsonEditor()
-    private val sqlEditor = createSqlEditor()
-    private val generateButton = JButton("预览 SQL")
-    private val errorTextArea = JBTextArea()
-    private val errorScrollPane = JScrollPane(errorTextArea)
+    private val parameterEditor = createJsonEditor().apply {
+        preferredSize = Dimension(400, 200)
+        isViewer = false
+        setPlaceholder("请输入JSON格式的参数")
+        addSettingsProvider { editor ->
+            editor.settings.isUseSoftWraps = true
+            editor.settings.setTabSize(2)
+        }
+    }
+
+    private val sqlEditor = createSqlEditor().apply {
+        preferredSize = Dimension(400, 200)
+        isViewer = false
+        setPlaceholder("生成的SQL将显示在这里")
+    }
+
+    private val generateButton = JButton("预览 SQL").apply {
+        isEnabled = false
+        icon = AllIcons.Actions.Execute
+        putClientProperty("JButton.buttonType", "primary")
+        background = JBColor.namedColor("Button.default.focusedBorderColor", JBColor.BLUE)
+        addActionListener {
+            generateSql()
+        }
+    }
+
+    private val errorTextArea = JBTextArea().apply {
+        isEditable = false
+        lineWrap = true
+        wrapStyleWord = true
+        foreground = JBColor.RED  // 文字红色
+        background = JBColor.namedColor("Panel.background", JBColor.WHITE)  // 默认背景
+        font = parameterEditor.font  // 使用与编辑器相同的字体
+        border = javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8)
+    }
+
+    private val errorScrollPane = JBScrollPane(errorTextArea).apply {
+        preferredSize = Dimension(400, 200)
+        minimumSize = Dimension(200, 100)
+        border = javax.swing.BorderFactory.createEmptyBorder()
+    }
 
     private var mainSplitter: JBSplitter? = null
     private var parameterPanel: JPanel? = null
@@ -61,8 +103,6 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
     private var currentEvent: SqlStatementSelectedEvent? = null
 
     init {
-        setupUI()
-        setupEventHandlers()
         project.messageBus.connect().subscribe(SqlStatementSelectedListener.TOPIC, this)
     }
 
@@ -90,56 +130,18 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
         return editor
     }
 
-    private fun setupUI() {
-        parameterEditor.preferredSize = Dimension(400, 200)
-        parameterEditor.isViewer = false
-        parameterEditor.setPlaceholder("请输入JSON格式的参数")
-        parameterEditor.addSettingsProvider { editor ->
-            editor.settings.isUseSoftWraps = true
-            editor.settings.setTabSize(2)
-        }
-
-        sqlEditor.preferredSize = Dimension(400, 200)
-        sqlEditor.isViewer = false
-        sqlEditor.setPlaceholder("生成的SQL将显示在这里")
-
-        generateButton.isEnabled = false
-        generateButton.icon = AllIcons.Actions.Execute
-        generateButton.putClientProperty("JButton.buttonType", "primary")
-        generateButton.background = JBColor.namedColor("Button.default.focusedBorderColor", JBColor.BLUE)
-
-        errorTextArea.isEditable = false
-        errorTextArea.lineWrap = true
-        errorTextArea.wrapStyleWord = true
-        errorTextArea.foreground = JBColor.RED  // 文字红色
-        errorTextArea.background = JBColor.namedColor("Panel.background", JBColor.WHITE)  // 默认背景
-        errorTextArea.font = parameterEditor.font  // 使用与编辑器相同的字体
-        errorTextArea.border = javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8)
-        errorScrollPane.preferredSize = Dimension(400, 200)
-        errorScrollPane.minimumSize = Dimension(200, 100)
-        errorScrollPane.border = javax.swing.BorderFactory.createEmptyBorder()
-    }
-
-    private fun setupEventHandlers() {
-        generateButton.addActionListener {
-            generateSql()
-        }
-    }
-
     private fun generateSql() {
         currentEvent?.let { event ->
             try {
                 hideError()
                 showSqlEditor()
-                val parameterJson = parameterEditor.text
-                val generatedSql = SqlGenerator.generateSql(
+                sqlEditor.text = SqlGenerator(
                     project,
-                    StatementQualifyId(event.namespace, event.statementId),
-                    parameterJson
+                    StatementQualifyId(event.namespace, event.statementId)
+                ).generate(
+                    parameterEditor.text
                 )
-                sqlEditor.text = generatedSql
             } catch (e: Exception) {
-                hideSqlEditor()
                 showError("生成 SQL 失败:\n\n${e.stackTraceToString()}")
             }
         }
@@ -196,23 +198,57 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
         }
     }
 
-    private fun hideSqlEditor() {
-    }
-
     fun getContent(): JPanel {
-        val mainPanel = JBPanel<JBPanel<*>>(BorderLayout())
-        mainPanel.border = javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8)
-
-        val infoPanel = createInfoPanel()
-        mainPanel.add(infoPanel, BorderLayout.NORTH)
+        val mainPanel = JBPanel<JBPanel<*>>(BorderLayout()).apply {
+            border = javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8)
+            add(JBPanel<JBPanel<*>>(GridBagLayout()).apply {
+                border = javax.swing.BorderFactory.createEmptyBorder(5, 8, 5, 8)
+                add(statementInfoLabel, GridBagConstraints().apply {
+                    gridx = 0
+                    gridy = 0
+                    anchor = GridBagConstraints.WEST
+                    fill = GridBagConstraints.HORIZONTAL
+                    weightx = 1.0
+                    insets = JBUI.insetsRight(10)
+                })
+                add(generateButton, GridBagConstraints().apply {
+                    gridx = 1
+                    gridy = 0
+                    anchor = GridBagConstraints.EAST
+                    fill = GridBagConstraints.NONE
+                    weightx = 0.0
+                    insets = JBUI.emptyInsets()
+                })
+            }, BorderLayout.NORTH)
+        }
 
         contentPanel = JBPanel<JBPanel<*>>(BorderLayout())
 
-        parameterPanel = createParameterPanel()
-        sqlPanel = createSqlPanel()
+        parameterPanel = JBPanel<JBPanel<*>>(BorderLayout()).apply {
+            border = javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0)
+            add(JBLabel("参数 (JSON 格式)").apply {
+                border = javax.swing.BorderFactory.createEmptyBorder(5, 8, 5, 8)
+            }, BorderLayout.NORTH)
+            add(JBPanel<JBPanel<*>>(BorderLayout()).apply {
+                border = javax.swing.BorderFactory.createEmptyBorder(0, 8, 0, 8)
+                add(parameterEditor, BorderLayout.CENTER)
+            }, BorderLayout.CENTER)
+        }
 
-        bottomPanel = JBPanel<JBPanel<*>>(BorderLayout())
-        bottomPanel!!.add(sqlPanel!!, BorderLayout.CENTER)
+        sqlPanel = JBPanel<JBPanel<*>>(BorderLayout()).apply {
+            border = javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0)
+            add(JBLabel("生成的 SQL").apply {
+                border = javax.swing.BorderFactory.createEmptyBorder(5, 8, 5, 8)
+            }, BorderLayout.NORTH)
+            add(JBPanel<JBPanel<*>>(BorderLayout()).apply {
+                border = javax.swing.BorderFactory.createEmptyBorder(0, 8, 0, 8)
+                add(sqlEditor, BorderLayout.CENTER)
+            }, BorderLayout.CENTER)
+        }
+
+        bottomPanel = JBPanel<JBPanel<*>>(BorderLayout()).apply {
+            add(sqlPanel!!, BorderLayout.CENTER)
+        }
 
         updateLayout(mainPanel.width, mainPanel.height)
 
@@ -231,74 +267,19 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
 
     private fun updateLayout(width: Int, height: Int) {
         if (contentPanel == null || parameterPanel == null || bottomPanel == null) return
-
-        contentPanel!!.removeAll()
-
-        val useVerticalLayout = height > width
-
-        if (mainSplitter != null) {
-            mainSplitter!!.firstComponent = null
-            mainSplitter!!.secondComponent = null
+        contentPanel?.removeAll()
+        mainSplitter?.apply {
+            firstComponent = null
+            secondComponent = null
         }
-
-        mainSplitter = JBSplitter(useVerticalLayout, 0.4f)
-        mainSplitter!!.firstComponent = parameterPanel
-        mainSplitter!!.secondComponent = bottomPanel
+        mainSplitter = JBSplitter(height > width, 0.4f).apply {
+            firstComponent = parameterPanel
+            secondComponent = bottomPanel
+        }
 
         contentPanel!!.add(mainSplitter!!, BorderLayout.CENTER)
         contentPanel!!.revalidate()
         contentPanel!!.repaint()
-    }
-
-    private fun createInfoPanel(): JPanel {
-        val panel = JBPanel<JBPanel<*>>(GridBagLayout())
-        panel.border = javax.swing.BorderFactory.createEmptyBorder(5, 8, 5, 8)
-
-        val gbc = GridBagConstraints()
-
-        gbc.gridx = 0
-        gbc.gridy = 0
-        gbc.anchor = GridBagConstraints.WEST
-        gbc.fill = GridBagConstraints.HORIZONTAL
-        gbc.weightx = 1.0
-        gbc.insets = Insets(0, 0, 0, 10)
-        panel.add(statementInfoLabel, gbc)
-
-        gbc.gridx = 1
-        gbc.gridy = 0
-        gbc.anchor = GridBagConstraints.EAST
-        gbc.fill = GridBagConstraints.NONE
-        gbc.weightx = 0.0
-        gbc.insets = Insets(0, 0, 0, 0)
-        panel.add(generateButton, gbc)
-
-        return panel
-    }
-
-    private fun createParameterPanel(): JPanel {
-        return JBPanel<JBPanel<*>>(BorderLayout()).apply {
-            border = javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0)
-            add(JBLabel("参数 (JSON 格式)").apply {
-                border = javax.swing.BorderFactory.createEmptyBorder(5, 8, 5, 8)
-            }, BorderLayout.NORTH)
-            add(JBPanel<JBPanel<*>>(BorderLayout()).apply {
-                border = javax.swing.BorderFactory.createEmptyBorder(0, 8, 0, 8)
-                add(parameterEditor, BorderLayout.CENTER)
-            }, BorderLayout.CENTER)
-        }
-    }
-
-    private fun createSqlPanel(): JPanel {
-        return JBPanel<JBPanel<*>>(BorderLayout()).apply {
-            border = javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0)
-            add(JBLabel("生成的 SQL").apply {
-                border = javax.swing.BorderFactory.createEmptyBorder(5, 8, 5, 8)
-            }, BorderLayout.NORTH)
-            add(JBPanel<JBPanel<*>>(BorderLayout()).apply {
-                border = javax.swing.BorderFactory.createEmptyBorder(0, 8, 0, 8)
-                add(sqlEditor, BorderLayout.CENTER)
-            }, BorderLayout.CENTER)
-        }
     }
 
     override fun onStatementSelected(event: SqlStatementSelectedEvent) {

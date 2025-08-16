@@ -5,73 +5,54 @@ import com.github.only52607.vividbatis.model.StatementQualifyId
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.intellij.openapi.project.Project
-import com.intellij.psi.xml.XmlFile
 import com.intellij.psi.xml.XmlTag
 import ognl.Ognl
 import ognl.OgnlContext
 
-data class SqlTemplate(
-    val namespace: String,
-    val statementId: String,
-    val statementType: String,
-    val mapperFile: XmlFile,
-    val project: Project
-)
-
-object SqlGenerator {
+class SqlGenerator(
+    val project: Project,
+    val statementQualifyId: StatementQualifyId
+) {
     private val gson = Gson()
 
-    fun generateSql(project: Project, statementQualifyId: StatementQualifyId, parameterJson: String): String {
-        val parameterInfo = ParameterAnalyzer.getStatementParameterInfo(project, statementQualifyId)
-        val rootObject = parameterInfo.createRootObject(gson.fromJson(parameterJson, JsonElement::class.java))
-        return generateSql(project, statementQualifyId, rootObject)
+    private val mapperFile by lazy {
+        project.findMybatisMapperXml(statementQualifyId.namespace)
+            ?: throw RuntimeException("未找到MyBatis映射文件: ${statementQualifyId.namespace}")
     }
 
-    fun generateSql(project: Project, statementQualifyId: StatementQualifyId, rootObject: Any?): String {
-        val template = project.buildSqlTemplate(statementQualifyId.namespace, statementQualifyId.statementId)
-            ?: throw RuntimeException("未找到语句: $statementQualifyId")
+    fun generate(parameterJson: String): String {
+        val parameterInfo = ParameterAnalyzer.getStatementParameterInfo(project, statementQualifyId)
+        val rootObject = parameterInfo.createRootObject(gson.fromJson(parameterJson, JsonElement::class.java))
+        return generate(rootObject)
+    }
+
+    fun generate(rootObject: Any?): String {
+        val statementTag = mapperFile.findMybatisStatementById(statementQualifyId.statementId)
+            ?: throw RuntimeException("Statement tag not found: ${statementQualifyId.statementId}")
         val sql = processXmlTag(
-            findStatementTag(template),
-            Ognl.createDefaultContext(rootObject) as OgnlContext,
-            template
+            statementTag,
+            Ognl.createDefaultContext(rootObject) as OgnlContext
         )
         return formatSql(sql)
     }
 
-    private fun Project.buildSqlTemplate(namespace: String, statementId: String): SqlTemplate? {
-        val xmlFile = findMybatisMapperXml(namespace) ?: return null
-        val statementTag = xmlFile.findMybatisStatementById(statementId) ?: return null
-        return SqlTemplate(
-            namespace = namespace,
-            statementId = statementId,
-            statementType = statementTag.name,
-            mapperFile = xmlFile,
-            project = this
-        )
-    }
-
-    private fun findStatementTag(template: SqlTemplate): XmlTag {
-        return template.mapperFile.findMybatisStatementById(template.statementId)
-            ?: throw RuntimeException("Statement tag not found: ${template.statementId}")
-    }
-
-    private fun processXmlTag(tag: XmlTag, context: OgnlContext, template: SqlTemplate): String {
+    private fun processXmlTag(tag: XmlTag, context: OgnlContext): String {
         return when (tag.name) {
-            "include" -> processIncludeTag(tag, context, template)
+            "include" -> processIncludeTag(tag, context)
             "bind" -> ""
-            "if" -> processConditionalTag(tag, context, template)
-            "foreach" -> processForeachTag(tag, context, template)
-            "trim" -> processTrimTag(tag, context, template)
-            "where" -> processWhereTag(tag, context, template)
-            "set" -> processSetTag(tag, context, template)
-            "choose" -> processChooseTag(tag, context, template)
-            "when" -> processConditionalTag(tag, context, template)
-            "otherwise" -> processChildTags(tag, context, template)
-            else -> processChildTags(tag, context, template)
+            "if" -> processConditionalTag(tag, context)
+            "foreach" -> processForeachTag(tag, context)
+            "trim" -> processTrimTag(tag, context)
+            "where" -> processWhereTag(tag, context)
+            "set" -> processSetTag(tag, context)
+            "choose" -> processChooseTag(tag, context)
+            "when" -> processConditionalTag(tag, context)
+            "otherwise" -> processChildTags(tag, context)
+            else -> processChildTags(tag, context)
         }
     }
 
-    private fun processIncludeTag(tag: XmlTag, context: OgnlContext, template: SqlTemplate): String {
+    private fun processIncludeTag(tag: XmlTag, context: OgnlContext): String {
         val refId = tag.getAttributeValue("refid") ?: return ""
         val includeParameters = mutableMapOf<String, String>()
 
@@ -84,21 +65,21 @@ object SqlGenerator {
         }
 
         val resolvedRefId = resolveVariables(refId, context, includeParameters)
-        val sqlFragment = template.mapperFile.findSqlFragmentByRefId(resolvedRefId)
+        val sqlFragment = mapperFile.findSqlFragmentByRefId(resolvedRefId)
 
         return if (sqlFragment != null) {
-            processXmlTag(sqlFragment, context, template)
+            processXmlTag(sqlFragment, context)
         } else ""
     }
 
-    private fun processConditionalTag(tag: XmlTag, context: OgnlContext, template: SqlTemplate): String {
+    private fun processConditionalTag(tag: XmlTag, context: OgnlContext): String {
         val test = tag.getAttributeValue("test") ?: return ""
         return if (Ognl.getValue(test, context, context.root).asBoolean()) {
-            processChildTags(tag, context, template)
+            processChildTags(tag, context)
         } else ""
     }
 
-    private fun processForeachTag(tag: XmlTag, context: OgnlContext, template: SqlTemplate): String {
+    private fun processForeachTag(tag: XmlTag, context: OgnlContext): String {
         val collection = tag.getAttributeValue("collection") ?: return ""
         val item = tag.getAttributeValue("item") ?: "item"
         val index = tag.getAttributeValue("index") ?: "index"
@@ -119,15 +100,15 @@ object SqlGenerator {
         val items = collectionList.mapIndexed { idx, value ->
             val originRoot = context.root
             context.root = ExtendedRootObject(context.root, mapOf(item to value, index to idx))
-            processChildTags(tag, context, template)
+            processChildTags(tag, context)
             context.root = originRoot
         }
 
         return open + items.joinToString(separator) + close
     }
 
-    private fun processTrimTag(tag: XmlTag, context: OgnlContext, template: SqlTemplate): String {
-        val content = processChildTags(tag, context, template).trim()
+    private fun processTrimTag(tag: XmlTag, context: OgnlContext): String {
+        val content = processChildTags(tag, context).trim()
         if (content.isBlank()) return ""
 
         val prefix = tag.getAttributeValue("prefix") ?: ""
@@ -144,8 +125,8 @@ object SqlGenerator {
         )
     }
 
-    private fun processWhereTag(tag: XmlTag, context: OgnlContext, template: SqlTemplate): String {
-        val content = processChildTags(tag, context, template).trim()
+    private fun processWhereTag(tag: XmlTag, context: OgnlContext): String {
+        val content = processChildTags(tag, context).trim()
         if (content.isBlank()) return ""
 
         return applyTrim(
@@ -157,8 +138,8 @@ object SqlGenerator {
         )
     }
 
-    private fun processSetTag(tag: XmlTag, context: OgnlContext, template: SqlTemplate): String {
-        val content = processChildTags(tag, context, template).trim()
+    private fun processSetTag(tag: XmlTag, context: OgnlContext): String {
+        val content = processChildTags(tag, context).trim()
         if (content.isBlank()) return ""
 
         return applyTrim(
@@ -226,22 +207,22 @@ object SqlGenerator {
         return withSuffix
     }
 
-    private fun processChooseTag(tag: XmlTag, context: OgnlContext, template: SqlTemplate): String {
+    private fun processChooseTag(tag: XmlTag, context: OgnlContext): String {
         tag.subTags.forEach { child ->
             if (child.name == "when") {
                 val test = child.getAttributeValue("test")
                 if (test != null && Ognl.getValue(test, context, context.root).asBoolean()) {
-                    return processChildTags(child, context, template)
+                    return processChildTags(child, context)
                 }
             }
         }
 
         return tag.subTags.find { it.name == "otherwise" }?.let {
-            processChildTags(it, context, template)
+            processChildTags(it, context)
         } ?: ""
     }
 
-    private fun processChildTags(tag: XmlTag, context: OgnlContext, template: SqlTemplate): String {
+    private fun processChildTags(tag: XmlTag, context: OgnlContext): String {
         val builder = StringBuilder()
         var currentContext = context
         var currentRoot = context.root
@@ -258,7 +239,7 @@ object SqlGenerator {
                             currentContext = Ognl.createDefaultContext(currentRoot) as OgnlContext
                         }
                     } else {
-                        builder.append(processXmlTag(child, currentContext, template))
+                        builder.append(processXmlTag(child, currentContext))
                     }
                 }
                 else -> {
