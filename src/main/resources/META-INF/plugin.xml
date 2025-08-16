@@ -13,9 +13,8 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Tool Window -->
-        <toolWindow factoryClass="com.github.only52607.vividbatis.toolWindow.SqlPreviewToolWindowFactory" 
-                    id="VividBatis" 
-                    displayName="VividBatis"
+        <toolWindow factoryClass="com.github.only52607.vividbatis.toolWindow.SqlPreviewWindow$Factory"
+                    id="VividBatis"
                     anchor="right"
                     canCloseContents="false"
                     icon="AllIcons.Actions.Preview"/>

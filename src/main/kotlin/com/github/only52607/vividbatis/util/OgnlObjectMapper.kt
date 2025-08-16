@@ -1,4 +1,4 @@
-package com.github.only52607.vividbatis.model
+package com.github.only52607.vividbatis.util
 
 import com.google.gson.JsonElement
 import com.intellij.psi.CommonClassNames

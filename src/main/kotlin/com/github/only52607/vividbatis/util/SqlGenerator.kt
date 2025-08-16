@@ -1,13 +1,9 @@
-package com.github.only52607.vividbatis.services
+package com.github.only52607.vividbatis.util
 
 import com.github.only52607.vividbatis.model.ExtendedRootObject
 import com.github.only52607.vividbatis.model.StatementQualifyId
-import com.github.only52607.vividbatis.util.findMybatisMapperXml
-import com.github.only52607.vividbatis.util.findMybatisStatementById
-import com.github.only52607.vividbatis.util.findSqlFragmentByRefId
 import com.google.gson.Gson
 import com.google.gson.JsonElement
-import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.psi.xml.XmlFile
 import com.intellij.psi.xml.XmlTag
@@ -22,19 +18,17 @@ data class SqlTemplate(
     val project: Project
 )
 
-@Service
-class SqlGenerationService(private val project: Project) {
-    private val parameterService = project.getService(ParameterAnalysisService::class.java)
+object SqlGenerator {
     private val gson = Gson()
 
-    fun generateSql(statementQualifyId: StatementQualifyId, parameterJson: String): String {
-        val parameterInfo = parameterService.getStatementParameterInfo(statementQualifyId)
+    fun generateSql(project: Project, statementQualifyId: StatementQualifyId, parameterJson: String): String {
+        val parameterInfo = ParameterAnalyzer.getStatementParameterInfo(project, statementQualifyId)
         val rootObject = parameterInfo.createRootObject(gson.fromJson(parameterJson, JsonElement::class.java))
-        return generateSql(statementQualifyId, rootObject)
+        return generateSql(project, statementQualifyId, rootObject)
     }
 
-    fun generateSql(statementQualifyId: StatementQualifyId, rootObject: Any?): String {
-        val template = buildSqlTemplate(statementQualifyId.namespace, statementQualifyId.statementId)
+    fun generateSql(project: Project, statementQualifyId: StatementQualifyId, rootObject: Any?): String {
+        val template = project.buildSqlTemplate(statementQualifyId.namespace, statementQualifyId.statementId)
             ?: throw RuntimeException("未找到语句: $statementQualifyId")
         val sql = processXmlTag(
             findStatementTag(template),
@@ -44,15 +38,15 @@ class SqlGenerationService(private val project: Project) {
         return formatSql(sql)
     }
 
-    private fun buildSqlTemplate(namespace: String, statementId: String): SqlTemplate? {
-        val xmlFile = project.findMybatisMapperXml(namespace) ?: return null
+    private fun Project.buildSqlTemplate(namespace: String, statementId: String): SqlTemplate? {
+        val xmlFile = findMybatisMapperXml(namespace) ?: return null
         val statementTag = xmlFile.findMybatisStatementById(statementId) ?: return null
         return SqlTemplate(
             namespace = namespace,
             statementId = statementId,
             statementType = statementTag.name,
             mapperFile = xmlFile,
-            project = project
+            project = this
         )
     }
 

@@ -3,14 +3,17 @@ package com.github.only52607.vividbatis.toolWindow
 import com.github.only52607.vividbatis.message.SqlStatementSelectedEvent
 import com.github.only52607.vividbatis.message.SqlStatementSelectedListener
 import com.github.only52607.vividbatis.model.StatementQualifyId
-import com.github.only52607.vividbatis.services.ParameterAnalysisService
-import com.github.only52607.vividbatis.services.SqlGenerationService
+import com.github.only52607.vividbatis.util.ParameterAnalyzer
+import com.github.only52607.vividbatis.util.SqlGenerator
 import com.google.gson.Gson
 import com.intellij.icons.AllIcons
 import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.JBColor
@@ -18,6 +21,7 @@ import com.intellij.ui.JBSplitter
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBTextArea
+import com.intellij.ui.content.ContentFactory
 import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
@@ -26,9 +30,20 @@ import javax.swing.JPanel
 import javax.swing.JScrollPane
 
 class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListener {
+    class Factory : ToolWindowFactory, DumbAware {
+        override fun shouldBeAvailable(project: Project) = true
 
-    private val parameterAnalysisService = project.getService(ParameterAnalysisService::class.java)
-    private val sqlGenerationService = project.getService(SqlGenerationService::class.java)
+        override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
+            val sqlPreviewWindow = SqlPreviewWindow(project)
+            val content = ContentFactory.getInstance().createContent(
+                sqlPreviewWindow.getContent(),
+                "SQL 预览",
+                false
+            )
+            toolWindow.contentManager.addContent(content)
+            toolWindow.setToHideOnEmptyContent(false)
+        }
+    }
 
     private val statementInfoLabel = JBLabel("请选择一个 SQL 语句标签")
     private val parameterEditor = createJsonEditor()
@@ -117,7 +132,8 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
                 hideError()
                 showSqlEditor()
                 val parameterJson = parameterEditor.text
-                val generatedSql = sqlGenerationService.generateSql(
+                val generatedSql = SqlGenerator.generateSql(
+                    project,
                     StatementQualifyId(event.namespace, event.statementId),
                     parameterJson
                 )
@@ -311,7 +327,8 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
 
         try {
             hideError()
-            parameterEditor.text = parameterAnalysisService.getStatementParameterInfo(
+            parameterEditor.text = ParameterAnalyzer.getStatementParameterInfo(
+                project,
                 StatementQualifyId(event.namespace, event.statementId),
             ).generateTemplate().let {
                 Gson().toJson(it)

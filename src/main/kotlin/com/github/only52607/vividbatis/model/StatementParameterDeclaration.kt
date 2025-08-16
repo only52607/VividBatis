@@ -2,6 +2,4 @@ package com.github.only52607.vividbatis.model
 
 import com.intellij.psi.PsiParameter
 
-data class StatementParameterDeclaration(val name: String?, val psiParameter: PsiParameter) {
-    val type: String get() = psiParameter.type.canonicalText
-}
+data class StatementParameterDeclaration(val name: String?, val psiParameter: PsiParameter)

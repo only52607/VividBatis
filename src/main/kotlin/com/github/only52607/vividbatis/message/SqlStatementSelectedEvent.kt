@@ -11,9 +11,9 @@ data class SqlStatementSelectedEvent(
 
 interface SqlStatementSelectedListener {
     fun onStatementSelected(event: SqlStatementSelectedEvent)
-    
+
     companion object {
         @JvmField
         val TOPIC = Topic.create("SqlStatementSelected", SqlStatementSelectedListener::class.java)
     }
-} 
+}
