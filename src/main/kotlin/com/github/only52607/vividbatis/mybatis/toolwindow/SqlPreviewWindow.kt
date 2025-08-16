@@ -1,9 +1,9 @@
-package com.github.only52607.vividbatis.toolWindow
+package com.github.only52607.vividbatis.mybatis.toolwindow
 
 
 import com.github.only52607.vividbatis.model.StatementQualifyId
-import com.github.only52607.vividbatis.util.ParameterAnalyzer
-import com.github.only52607.vividbatis.util.SqlGenerator
+import com.github.only52607.vividbatis.mybatis.util.ParameterAnalyzer
+import com.github.only52607.vividbatis.mybatis.util.SqlGenerator
 import com.google.gson.GsonBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.lang.Language

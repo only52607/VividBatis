@@ -1,7 +1,7 @@
-package com.github.only52607.vividbatis.injection
+package com.github.only52607.vividbatis.language.injection
 
 import com.github.only52607.vividbatis.language.OgnlLanguage
-import com.github.only52607.vividbatis.util.isInMybatisMapperFile
+import com.github.only52607.vividbatis.mybatis.util.isInMybatisMapperFile
 import com.intellij.lang.injection.MultiHostInjector
 import com.intellij.lang.injection.MultiHostRegistrar
 import com.intellij.openapi.util.TextRange

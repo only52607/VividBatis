@@ -13,7 +13,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Tool Window -->
-        <toolWindow factoryClass="com.github.only52607.vividbatis.toolWindow.SqlPreviewWindow$Factory"
+        <toolWindow factoryClass="com.github.only52607.vividbatis.mybatis.toolwindow.SqlPreviewWindow$Factory"
                     id="VividBatis"
                     anchor="right"
                     canCloseContents="false"
@@ -21,7 +21,7 @@
         
         <!-- Line Marker Provider -->
         <codeInsight.lineMarkerProvider language="XML" 
-                                        implementationClass="com.github.only52607.vividbatis.linemarker.MybatisStatementLineMarkerProvider"/>
+                                        implementationClass="com.github.only52607.vividbatis.mybatis.linemarker.MybatisStatementLineMarkerProvider"/>
         
         <!-- OGNL Language Support -->
         <fileType name="OGNL" 
@@ -37,6 +37,6 @@
                                        implementationClass="com.github.only52607.vividbatis.language.OgnlSyntaxHighlighterFactory"/>
         
         <!-- OGNL Language Injection -->
-        <multiHostInjector implementation="com.github.only52607.vividbatis.injection.MybatisOgnlInjector"/>
+        <multiHostInjector implementation="com.github.only52607.vividbatis.language.injection.MybatisOgnlInjector"/>
     </extensions>
 </idea-plugin>

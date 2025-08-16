@@ -1,4 +1,4 @@
-package com.github.only52607.vividbatis
+package com.github.only52607.vividbatis.common
 
 import com.intellij.DynamicBundle
 import org.jetbrains.annotations.NonNls

@@ -1,4 +1,4 @@
-package com.github.only52607.vividbatis.util
+package com.github.only52607.vividbatis.mybatis.util
 
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiManager

@@ -1,9 +1,9 @@
-package com.github.only52607.vividbatis.linemarker
+package com.github.only52607.vividbatis.mybatis.linemarker
 
-import com.github.only52607.vividbatis.toolWindow.SqlPreviewWindow
-import com.github.only52607.vividbatis.util.SUPPORTED_STATEMENTS
-import com.github.only52607.vividbatis.util.findMapperNamespace
-import com.github.only52607.vividbatis.util.isInMybatisMapperFile
+import com.github.only52607.vividbatis.mybatis.toolwindow.SqlPreviewWindow
+import com.github.only52607.vividbatis.mybatis.util.SUPPORTED_STATEMENTS
+import com.github.only52607.vividbatis.mybatis.util.findMapperNamespace
+import com.github.only52607.vividbatis.mybatis.util.isInMybatisMapperFile
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.icons.AllIcons

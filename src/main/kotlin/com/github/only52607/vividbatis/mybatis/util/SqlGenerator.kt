@@ -1,4 +1,4 @@
-package com.github.only52607.vividbatis.util
+package com.github.only52607.vividbatis.mybatis.util
 
 import com.github.only52607.vividbatis.model.ExtendedRootObject
 import com.github.only52607.vividbatis.model.StatementQualifyId
@@ -238,7 +238,8 @@ class SqlGenerator(
                             currentRoot = ExtendedRootObject(currentRoot, mapOf(name to bindValue))
                             currentContext = Ognl.createDefaultContext(currentRoot) as OgnlContext
                         }
-                    } else {
+                    }
+                    else {
                         builder.append(processXmlTag(child, currentContext))
                     }
                 }
@@ -271,7 +272,7 @@ class SqlGenerator(
     private fun replaceParameters(text: String, context: OgnlContext): String {
         var result = text
 
-        result = "#\\{([^}]+)}".toRegex().replace(result) { match ->
+        result = "#\\{\\[^}]+\\}".toRegex().replace(result) { match ->
             val parts = match.groupValues[1].trim().split(",").map(String::trim)
             val paramName = parts.first()
             val properties = parts.drop(1).associate {
@@ -295,9 +296,9 @@ class SqlGenerator(
     private fun formatSql(sql: String): String {
         return sql
             .replace("\\s+".toRegex(), " ")
-            .replace("\\( ", "(")
-            .replace(" \\)", ")")
-            .replace(" ,", ",")
+            .replace("\\( ".toRegex(), "(")
+            .replace(" \\)".toRegex(), ")")
+            .replace(" ,".toRegex(), ",")
             .trim()
     }
 
