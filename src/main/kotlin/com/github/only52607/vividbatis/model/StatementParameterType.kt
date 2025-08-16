@@ -1,6 +1,6 @@
 package com.github.only52607.vividbatis.model
 
-import PsiTypeToJsonConverter
+import com.github.only52607.vividbatis.util.PsiTypeToJsonConverter
 import com.github.only52607.vividbatis.util.OgnlObjectMapper
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
