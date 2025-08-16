@@ -50,7 +50,7 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
             }
         }
     }
-
+    private val toolWindowManager = ToolWindowManager.getInstance(project)
     private val statementInfoLabel = JBLabel("请选择一个 SQL 语句标签")
     private val parameterEditor = createJsonEditor().apply {
         preferredSize = Dimension(400, 200)
@@ -74,7 +74,9 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
         putClientProperty("JButton.buttonType", "primary")
         background = JBColor.namedColor("Button.default.focusedBorderColor", JBColor.BLUE)
         addActionListener {
-            generateSql()
+            currentEvent?.let {
+                generateSql(StatementQualifyId(it.namespace, it.statementId))
+            }
         }
     }
 
@@ -130,20 +132,18 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
         return editor
     }
 
-    private fun generateSql() {
-        currentEvent?.let { event ->
-            try {
-                hideError()
-                showSqlEditor()
-                sqlEditor.text = SqlGenerator(
-                    project,
-                    StatementQualifyId(event.namespace, event.statementId)
-                ).generate(
-                    parameterEditor.text
-                )
-            } catch (e: Exception) {
-                showError("生成 SQL 失败:\n\n${e.stackTraceToString()}")
-            }
+    private fun generateSql(statementQualifyId: StatementQualifyId) {
+        try {
+            hideError()
+            showSqlEditor()
+            sqlEditor.text = SqlGenerator(
+                project,
+                statementQualifyId
+            ).generate(
+                parameterEditor.text
+            )
+        } catch (e: Exception) {
+            showError("生成 SQL 失败:\n\n${e.stackTraceToString()}")
         }
     }
 
@@ -283,9 +283,7 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
     }
 
     override fun onStatementSelected(event: SqlStatementSelectedEvent) {
-        val toolWindowManager = ToolWindowManager.getInstance(project)
         val toolWindow = toolWindowManager.getToolWindow("VividBatis")
-
         if (toolWindow != null) {
             if (!toolWindow.isVisible) {
                 toolWindow.show(null)
@@ -302,21 +300,16 @@ class SqlPreviewWindow(private val project: Project) : SqlStatementSelectedListe
                 }
             }
         }
-
         currentEvent = event
         statementInfoLabel.text = "${event.namespace}.${event.statementId} [${event.statementType}]"
-
         try {
             hideError()
             parameterEditor.text = ParameterAnalyzer.getStatementParameterInfo(
                 project,
                 StatementQualifyId(event.namespace, event.statementId),
-            ).generateTemplate().let {
-                Gson().toJson(it)
-            } ?: "{}"
+            ).generateTemplate().let { Gson().toJson(it) } ?: "{}"
             generateButton.isEnabled = true
-
-            generateSql()
+            generateSql(StatementQualifyId(event.namespace, event.statementId))
         } catch (e: Exception) {
             parameterEditor.text = "// 无法分析参数类型: ${e.message}"
             generateButton.isEnabled = false
