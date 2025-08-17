@@ -99,9 +99,12 @@ class SqlGenerator(
 
         val items = collectionList.mapIndexed { idx, value ->
             val originRoot = context.root
-            context.root = ExtendedRootObject(context.root, mapOf(item to value, index to idx))
-            processChildTags(tag, context)
-            context.root = originRoot
+            try {
+                context.root = ExtendedRootObject(context.root, mapOf(item to value, index to idx))
+                processChildTags(tag, context)
+            } finally {
+                context.root = originRoot
+            }
         }
 
         return open + items.joinToString(separator) + close
