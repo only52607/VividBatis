@@ -1,7 +1,7 @@
 package com.github.only52607.vividbatis.model
 
 @JvmInline
-value class StatementQualifyId(
+value class StatementPath(
     val fullId: String
 ) {
     constructor(namespace: String, statementId: String) : this("$namespace.$statementId")

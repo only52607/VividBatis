@@ -1,5 +1,6 @@
 package com.github.only52607.vividbatis.mybatis.linemarker
 
+import com.github.only52607.vividbatis.model.StatementPath
 import com.github.only52607.vividbatis.mybatis.toolwindow.SqlPreviewWindow
 import com.github.only52607.vividbatis.mybatis.util.SUPPORTED_STATEMENTS
 import com.github.only52607.vividbatis.mybatis.util.findMapperNamespace
@@ -11,7 +12,6 @@ import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.xml.XmlTag
-import javax.swing.Icon
 
 class MybatisStatementLineMarkerProvider : LineMarkerProvider {
 
@@ -42,7 +42,7 @@ class MybatisStatementLineMarkerProvider : LineMarkerProvider {
         toolWindow.show {
             val content = toolWindow.contentManager.getContent(0) ?: return@show
             val previewWindow = content.getUserData(SqlPreviewWindow.PREVIEW_WINDOW_KEY)
-            previewWindow?.processStatementSelection(namespace, statementId, statementType)
+            previewWindow?.processStatementSelection(StatementPath(namespace, statementId), statementType)
         }
     }
 }

@@ -1,7 +1,7 @@
 package com.github.only52607.vividbatis.mybatis.toolwindow
 
 
-import com.github.only52607.vividbatis.model.StatementQualifyId
+import com.github.only52607.vividbatis.model.StatementPath
 import com.github.only52607.vividbatis.mybatis.util.ParameterAnalyzer
 import com.github.only52607.vividbatis.mybatis.util.SqlGenerator
 import com.google.gson.GsonBuilder
@@ -56,13 +56,13 @@ class SqlPreviewWindow(private val project: Project) {
     private val generateButton = createGenerateButton()
     private val gson = GsonBuilder().setPrettyPrinting().create()
 
-    private var currentStatement: StatementQualifyId? = null
+    private var currentStatement: StatementPath? = null
 
     val contentPanel: JPanel = buildMainPanel()
 
-    fun processStatementSelection(namespace: String, statementId: String, statementType: String) {
-        currentStatement = StatementQualifyId(namespace, statementId)
-        statementInfoLabel.text = "${namespace}.${statementId} [${statementType}]"
+    fun processStatementSelection(statementPath: StatementPath, statementType: String) {
+        currentStatement = statementPath
+        statementInfoLabel.text = "$statementPath [${statementType}]"
         sqlEditor.text = ""
 
         try {
@@ -139,7 +139,7 @@ class SqlPreviewWindow(private val project: Project) {
         bottomPanel.add(sqlPanel, SQL_PANEL)
         bottomPanel.add(errorScrollPane, ERROR_PANEL)
 
-        val mainSplitter = JBSplitter(false, 0.4f).apply {
+        val mainSplitter = JBSplitter(true, 0.4f).apply {
             firstComponent = parameterPanel
             secondComponent = bottomPanel
         }

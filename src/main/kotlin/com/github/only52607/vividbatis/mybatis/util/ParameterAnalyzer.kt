@@ -2,7 +2,7 @@ package com.github.only52607.vividbatis.mybatis.util
 
 import com.github.only52607.vividbatis.model.StatementParameterDeclaration
 import com.github.only52607.vividbatis.model.StatementParameterType
-import com.github.only52607.vividbatis.model.StatementQualifyId
+import com.github.only52607.vividbatis.model.StatementPath
 import com.intellij.openapi.project.Project
 import com.intellij.psi.*
 import com.intellij.psi.search.GlobalSearchScope
@@ -13,16 +13,16 @@ import com.intellij.psi.CommonClassNames
 object ParameterAnalyzer {
     const val TYPE_IBATIS_PARAM = "org.apache.ibatis.annotations.Param"
 
-    fun getStatementParameterInfo(project: Project, statementQualifyId: StatementQualifyId): StatementParameterType {
-        val parameterTypeInXml = project.findMybatisMapperXml(statementQualifyId.namespace)
-            ?.findMybatisStatementById(statementQualifyId.statementId)
+    fun getStatementParameterInfo(project: Project, statementPath: StatementPath): StatementParameterType {
+        val parameterTypeInXml = project.findMybatisMapperXml(statementPath.namespace)
+            ?.findMybatisStatementById(statementPath.statementId)
             ?.getAttributeValue("parameterType")
         if (parameterTypeInXml?.isNotEmpty() == true) {
             return StatementParameterType.JavaBean(
                 project.findPsiClass(parameterTypeInXml)?.let(PsiTypesUtil::getClassType)
             )
         }
-        val method = project.findPsiMethod(statementQualifyId.namespace, statementQualifyId.statementId)
+        val method = project.findPsiMethod(statementPath.namespace, statementPath.statementId)
             ?: return StatementParameterType.Map()
         val parameters = method.parameterList.parameters
         if (parameters.isEmpty()) {

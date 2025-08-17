@@ -1,7 +1,7 @@
 package com.github.only52607.vividbatis.mybatis.util
 
 import com.github.only52607.vividbatis.model.ExtendedRootObject
-import com.github.only52607.vividbatis.model.StatementQualifyId
+import com.github.only52607.vividbatis.model.StatementPath
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.intellij.openapi.project.Project
@@ -11,24 +11,24 @@ import ognl.OgnlContext
 
 class SqlGenerator(
     val project: Project,
-    val statementQualifyId: StatementQualifyId
+    val statementPath: StatementPath
 ) {
     private val gson = Gson()
 
     private val mapperFile by lazy {
-        project.findMybatisMapperXml(statementQualifyId.namespace)
-            ?: throw RuntimeException("未找到MyBatis映射文件: ${statementQualifyId.namespace}")
+        project.findMybatisMapperXml(statementPath.namespace)
+            ?: throw RuntimeException("未找到MyBatis映射文件: ${statementPath.namespace}")
     }
 
     fun generate(parameterJson: String): String {
-        val parameterInfo = ParameterAnalyzer.getStatementParameterInfo(project, statementQualifyId)
+        val parameterInfo = ParameterAnalyzer.getStatementParameterInfo(project, statementPath)
         val rootObject = parameterInfo.createRootObject(gson.fromJson(parameterJson, JsonElement::class.java))
         return generate(rootObject)
     }
 
     fun generate(rootObject: Any?): String {
-        val statementTag = mapperFile.findMybatisStatementById(statementQualifyId.statementId)
-            ?: throw RuntimeException("Statement tag not found: ${statementQualifyId.statementId}")
+        val statementTag = mapperFile.findMybatisStatementById(statementPath.statementId)
+            ?: throw RuntimeException("Statement tag not found: ${statementPath.statementId}")
         val sql = processXmlTag(
             statementTag,
             Ognl.createDefaultContext(rootObject) as OgnlContext
@@ -272,7 +272,7 @@ class SqlGenerator(
     private fun replaceParameters(text: String, context: OgnlContext): String {
         var result = text
 
-        result = "#\\{\\[^}]+\\}".toRegex().replace(result) { match ->
+        result = "#\\{([^}]+)}".toRegex().replace(result) { match ->
             val parts = match.groupValues[1].trim().split(",").map(String::trim)
             val paramName = parts.first()
             val properties = parts.drop(1).associate {
