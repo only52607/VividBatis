@@ -8,13 +8,13 @@ import java.util.List;
 public interface BlogMapper {
 
     // Basic select
-    Blog selectBlog(int id);
+    Blog selectBlog(@Param("id") int id);
 
     // Dynamic SQL: <if>
-    List<Blog> findActiveBlogWithTitleLike(String title);
+    List<Blog> findActiveBlogWithTitleLike(@Param("title") String title);
 
     // Dynamic SQL: <choose>, <when>, <otherwise>
-    List<Blog> findBlogByState(String state);
+    List<Blog> findBlogByState(@Param("state") String state);
 
     // Dynamic SQL: <where>
     List<Blog> findBlogByAuthorAndTitle(@Param("authorId") Integer authorId, @Param("title") String title);
@@ -35,5 +35,5 @@ public interface BlogMapper {
     List<Blog> findBlogWithTitleLikePattern(String pattern);
 
     // Reusable fragment: <sql> and <include>
-    Blog selectBlogDetails(int id);
+    Blog selectBlogDetails(@Param("id") int id);
 }

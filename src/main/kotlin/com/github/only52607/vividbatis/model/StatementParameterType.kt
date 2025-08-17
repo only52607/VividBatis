@@ -29,7 +29,7 @@ sealed class StatementParameterType {
             val jsonObject = JsonObject()
             declarations.forEachIndexed { idx, param ->
                 val paramName = param.name ?: "param${idx}"
-                jsonObject.add(paramName, PsiTypeToJsonConverter.convert(param.psiParameter.type))
+                jsonObject.add(paramName, PsiTypeToJsonConverter.convert(param.psiParameter?.type))
             }
             return jsonObject
         }
@@ -43,7 +43,16 @@ sealed class StatementParameterType {
                     val paramName = param.name ?: "param${idx}"
                     val jsonValue = jsonObject.get(paramName)
                     if (jsonValue != null) {
-                        parameterMap[paramName] = OgnlObjectMapper.convertToOgnlObject(jsonElement, param.psiParameter.type)
+                        val value = OgnlObjectMapper.convertToOgnlObject(jsonValue, param.psiParameter?.type)
+                        parameterMap[paramName] = value
+                        if (param.name == null && param.psiParameter != null) {
+                            if (!parameterMap.containsKey(param.psiParameter.name)) {
+                                parameterMap[param.psiParameter.name] = value
+                            }
+                        }
+                        if (idx == 0) {
+                            parameterMap["_parameter"] = value
+                        }
                     }
                 }
             }

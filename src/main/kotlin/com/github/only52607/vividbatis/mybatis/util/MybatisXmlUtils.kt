@@ -2,6 +2,7 @@ package com.github.only52607.vividbatis.mybatis.util
 
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiParameter
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.xml.XmlFile
@@ -65,4 +66,12 @@ fun XmlTag.isInMybatisMapperFile(): Boolean {
         current = current.parentTag!!
     }
     return current.name == "mapper" && current.getAttributeValue("namespace") != null
+}
+
+// PsiParameter-level extensions
+const val TYPE_IBATIS_PARAM = "org.apache.ibatis.annotations.Param"
+
+fun PsiParameter.findMyBatisParameterName(): String? {
+    return annotations.find { it.qualifiedName == TYPE_IBATIS_PARAM }
+        ?.findAttributeValue("value")?.text?.removeSurrounding("\"")
 }
