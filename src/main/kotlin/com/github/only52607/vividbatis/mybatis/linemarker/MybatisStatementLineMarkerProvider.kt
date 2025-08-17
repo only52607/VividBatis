@@ -9,6 +9,7 @@ import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.markup.GutterIconRenderer
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.xml.XmlTag
@@ -33,16 +34,18 @@ class MybatisStatementLineMarkerProvider : LineMarkerProvider {
     }
 
     private fun handleIconClick(xmlTag: XmlTag) {
-        val namespace = xmlTag.findMapperNamespace() ?: return
-        val statementId = xmlTag.getAttributeValue("id") ?: return
-        val statementType = xmlTag.name
         val project = xmlTag.project
+        runReadAction {
+            val namespace = xmlTag.findMapperNamespace() ?: return@runReadAction
+            val statementId = xmlTag.getAttributeValue("id") ?: return@runReadAction
+            val statementType = xmlTag.name
 
-        val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("VividBatis") ?: return
-        toolWindow.show {
-            val content = toolWindow.contentManager.getContent(0) ?: return@show
-            val previewWindow = content.getUserData(SqlPreviewWindow.PREVIEW_WINDOW_KEY)
-            previewWindow?.processStatementSelection(StatementPath(namespace, statementId), statementType)
+            val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("VividBatis") ?: return@runReadAction
+            toolWindow.show {
+                val content = toolWindow.contentManager.getContent(0) ?: return@show
+                val previewWindow = content.getUserData(SqlPreviewWindow.PREVIEW_WINDOW_KEY)
+                previewWindow?.processStatementSelection(StatementPath(namespace, statementId), statementType)
+            }
         }
     }
 }

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mappers.BlogMapper">
+
+    <!-- Reusable SQL Fragment: <sql> -->
+    <sql id="blogColumns">
+        b.id, b.title, b.content, b.author_id, b.state, b.created_on
+    </sql>
+
+    <sql id="authorColumns">
+        a.id as author_id, a.username, a.password, a.email, a.bio
+    </sql>
+
+    <resultMap id="blogResultMap" type="Blog">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="authorId" column="author_id"/>
+        <result property="state" column="state"/>
+        <result property="createdOn" column="created_on"/>
+        <association property="author" javaType="Author">
+            <id property="id" column="author_id"/>
+            <result property="username" column="username"/>
+            <result property="password" column="password"/>
+            <result property="email" column="email"/>
+            <result property="bio" column="bio"/>
+        </association>
+    </resultMap>
+
+    <!-- Basic Select -->
+    <select id="selectBlog" resultType="Blog">
+        SELECT * FROM blog WHERE id = #{id}
+    </select>
+
+    <!-- Using <sql> and <include> -->
+    <select id="selectBlogDetails" resultMap="blogResultMap">
+        SELECT
+        <include refid="blogColumns"/>,
+        <include refid="authorColumns"/>
+        FROM blog b
+        JOIN author a ON b.author_id = a.id
+        WHERE b.id = #{id}
+    </select>
+
+    <!-- Dynamic SQL: <if> -->
+    <select id="findActiveBlogWithTitleLike" resultType="Blog">
+        SELECT * FROM blog WHERE state = 'ACTIVE'
+        <if test="title != null">
+            AND title LIKE #{title}
+        </if>
+    </select>
+
+    <!-- Dynamic SQL: <choose>, <when>, <otherwise> -->
+    <select id="findBlogByState" resultType="Blog">
+        SELECT * FROM blog WHERE 1=1
+        <choose>
+            <when test="state == 'ACTIVE'">
+                AND state = 'ACTIVE'
+            </when>
+            <when test="state == 'INACTIVE'">
+                AND state = 'INACTIVE'
+            </when>
+            <otherwise>
+                AND state = 'DRAFT'
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- Dynamic SQL: <where> -->
+    <select id="findBlogByAuthorAndTitle" resultType="Blog">
+        SELECT * FROM blog
+        <where>
+            <if test="authorId != null">
+                author_id = #{authorId}
+            </if>
+            <if test="title != null">
+                AND title like #{title}
+            </if>
+        </where>
+    </select>
+
+    <!-- Dynamic SQL: <set> for updates -->
+    <update id="updateBlog">
+        UPDATE blog
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="state != null">state = #{state},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- Dynamic SQL: <trim> for custom prefix/suffix in updates -->
+    <update id="updateBlogSelective">
+        UPDATE blog
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="state != null">state = #{state},</if>
+        </trim>
+        WHERE id = #{id}
+    </update>
+
+    <!-- Dynamic SQL: <foreach> for IN clause -->
+    <select id="selectBlogIn" resultType="Blog">
+        SELECT * FROM blog WHERE id IN
+        <foreach item="item" collection="list" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <!-- Dynamic SQL: <foreach> for batch insert -->
+    <insert id="insertBlogs" parameterType="java.util.List">
+        INSERT INTO blog (id, title, content, author_id, state, created_on)
+        VALUES
+        <foreach item="blog" collection="list" separator=",">
+            (#{blog.id}, #{blog.title}, #{blog.content}, #{blog.authorId}, #{blog.state}, #{blog.createdOn})
+        </foreach>
+    </insert>
+
+    <!-- Dynamic SQL: <bind> -->
+    <select id="findBlogWithTitleLikePattern" resultType="Blog">
+        <bind name="pattern" value="'%' + _parameter + '%'" />
+        SELECT * FROM blog WHERE title LIKE #{pattern}
+    </select>
+
+</mapper>
