@@ -7,6 +7,8 @@ import com.github.only52607.vividbatis.mybatis.util.SqlGenerator
 import com.google.gson.GsonBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.lang.Language
+import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.readAction
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.DumbAware
@@ -23,6 +25,10 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.content.ContentFactory
 import com.intellij.util.ui.JBUI
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
@@ -47,6 +53,8 @@ class SqlPreviewWindow(private val project: Project) {
         }
     }
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.EDT)
+
     private val statementInfoLabel = JBLabel("请选择一个 SQL 语句标签")
     private val parameterEditor = createEditorTextField(languageId = "JSON", placeholder = "请输入JSON格式的参数")
     private val sqlEditor = createEditorTextField(languageId = "SQL", placeholder = "生成的SQL将显示在这里")
@@ -65,28 +73,35 @@ class SqlPreviewWindow(private val project: Project) {
         statementInfoLabel.text = "$statementPath [${statementType}]"
         sqlEditor.text = ""
 
-        try {
-            val parameterInfo = ParameterAnalyzer.getStatementParameterInfo(project, currentStatement!!)
-            val template = parameterInfo.generateTemplate()
-            parameterEditor.text = gson.toJson(template)
-            setGenerateButtonEnabled(true)
-            generateSql()
-        } catch (e: Exception) {
-            parameterEditor.text = "// 无法分析参数类型: ${e.message}"
-            setGenerateButtonEnabled(false)
-            val errorMessage = "参数分析失败:\n\n${e.stackTraceToString()}"
-            showError(errorMessage)
+        scope.launch {
+            try {
+                val template = readAction {
+                    ParameterAnalyzer.getStatementParameterInfo(project, currentStatement!!).generateTemplate()
+                }
+                parameterEditor.text = gson.toJson(template)
+                setGenerateButtonEnabled(true)
+                generateSql()
+            } catch (e: Exception) {
+                parameterEditor.text = "// 无法分析参数类型: ${e.message}"
+                setGenerateButtonEnabled(false)
+                val errorMessage = "参数分析失败:\n\n${e.stackTraceToString()}"
+                showError(errorMessage)
+            }
         }
     }
 
     private fun generateSql() {
         currentStatement?.let {
-            try {
-                val generatedSql = SqlGenerator(project, it).generate(parameterEditor.text)
-                showSql(generatedSql)
-            } catch (e: Exception) {
-                val errorMessage = "生成 SQL 失败:\n\n${e.stackTraceToString()}"
-                showError(errorMessage)
+            scope.launch {
+                try {
+                    val generatedSql = readAction {
+                        SqlGenerator(project, it).generate(parameterEditor.text)
+                    }
+                    showSql(generatedSql)
+                } catch (e: Exception) {
+                    val errorMessage = "生成 SQL 失败:\n\n${e.stackTraceToString()}"
+                    showError(errorMessage)
+                }
             }
         }
     }
