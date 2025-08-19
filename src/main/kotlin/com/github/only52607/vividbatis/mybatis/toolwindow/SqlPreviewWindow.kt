@@ -7,16 +7,20 @@ import com.github.only52607.vividbatis.mybatis.util.SqlGenerator
 import com.google.gson.GsonBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.lang.Language
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.readAction
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.ui.EditorTextField
 import com.intellij.ui.JBColor
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.components.JBLabel
@@ -38,7 +42,7 @@ import javax.swing.JPanel
 private const val SQL_PANEL = "SQL_PANEL"
 private const val ERROR_PANEL = "ERROR_PANEL"
 
-class SqlPreviewWindow(private val project: Project) {
+class SqlPreviewWindow(private val project: Project) : Disposable {
     companion object {
         val PREVIEW_WINDOW_KEY = Key.create<SqlPreviewWindow>("vividbatis.sql.preview.window")
     }
@@ -49,6 +53,7 @@ class SqlPreviewWindow(private val project: Project) {
             val sqlPreviewWindow = SqlPreviewWindow(project)
             val content = ContentFactory.getInstance().createContent(sqlPreviewWindow.contentPanel, "SQL 预览", false)
             content.putUserData(PREVIEW_WINDOW_KEY, sqlPreviewWindow)
+            Disposer.register(content, sqlPreviewWindow)
             toolWindow.contentManager.addContent(content)
         }
     }
@@ -56,8 +61,18 @@ class SqlPreviewWindow(private val project: Project) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.EDT)
 
     private val statementInfoLabel = JBLabel("请选择一个 SQL 语句标签")
-    private val parameterEditor = createEditorTextField(languageId = "JSON", placeholder = "请输入JSON格式的参数")
-    private val sqlEditor = createEditorTextField(languageId = "SQL", placeholder = "生成的SQL将显示在这里")
+    private val parameterEditor = createEditor(
+        project,
+        Language.findLanguageByID("JSON")?.associatedFileType ?: PlainTextFileType.INSTANCE,
+        false,
+        "请输入JSON格式的参数"
+    )
+    private val sqlEditor = createEditor(
+        project,
+        Language.findLanguageByID("SQL")?.associatedFileType ?: PlainTextFileType.INSTANCE,
+        true,
+        "生成的SQL将显示在这里"
+    )
     private val errorTextArea = createErrorTextArea()
     private val bottomCardLayout = CardLayout()
     private val bottomPanel = JBPanel<JBPanel<*>>(bottomCardLayout)
@@ -71,18 +86,18 @@ class SqlPreviewWindow(private val project: Project) {
     fun processStatementSelection(statementPath: StatementPath, statementType: String) {
         currentStatement = statementPath
         statementInfoLabel.text = "$statementPath [${statementType}]"
-        sqlEditor.text = ""
+        setSqlText("")
 
         scope.launch {
             try {
                 val template = readAction {
                     ParameterAnalyzer.getStatementParameterInfo(project, currentStatement!!).generateTemplate()
                 }
-                parameterEditor.text = gson.toJson(template)
+                setParameterText(gson.toJson(template))
                 setGenerateButtonEnabled(true)
                 generateSql()
             } catch (e: Exception) {
-                parameterEditor.text = "// 无法分析参数类型: ${e.message}"
+                setParameterText("// 无法分析参数类型: ${e.message}")
                 setGenerateButtonEnabled(false)
                 val errorMessage = "参数分析失败:\n\n${e.stackTraceToString()}"
                 showError(errorMessage)
@@ -95,7 +110,7 @@ class SqlPreviewWindow(private val project: Project) {
             scope.launch {
                 try {
                     val generatedSql = readAction {
-                        SqlGenerator(project, it).generate(parameterEditor.text)
+                        SqlGenerator(project, it).generate(parameterEditor.document.text)
                     }
                     showSql(generatedSql)
                 } catch (e: Exception) {
@@ -106,18 +121,18 @@ class SqlPreviewWindow(private val project: Project) {
         }
     }
 
-    private fun createEditorTextField(languageId: String, placeholder: String): EditorTextField {
-        val language = Language.findLanguageByID(languageId)
-        val fileType: FileType? = language?.associatedFileType
-        return EditorTextField("", project, fileType ?: PlainTextFileType.INSTANCE).apply {
-            setOneLineMode(false)
-            isViewer = false
-            setPlaceholder(placeholder)
-            addSettingsProvider { editor ->
-                editor.settings.isUseSoftWraps = true
-                editor.settings.setTabSize(2)
-            }
+    private fun createEditor(project: Project, fileType: FileType, isViewer: Boolean, placeholder: String): EditorEx {
+        val editorFactory = EditorFactory.getInstance()
+        val document = editorFactory.createDocument("")
+        val editor = editorFactory.createEditor(document, project, fileType, isViewer) as EditorEx
+        editor.settings.apply {
+            isLineNumbersShown = true
+            isUseSoftWraps = true
+            setTabSize(2)
+            isFoldingOutlineShown = true
         }
+        editor.setPlaceholder(placeholder)
+        return editor
     }
 
     private fun createErrorTextArea() = JBTextArea().apply {
@@ -125,7 +140,7 @@ class SqlPreviewWindow(private val project: Project) {
         lineWrap = true
         wrapStyleWord = true
         foreground = JBColor.RED
-        font = parameterEditor.font
+        font = Font("monospaced", Font.PLAIN, 12)
         border = JBUI.Borders.empty(8)
     }
 
@@ -147,8 +162,8 @@ class SqlPreviewWindow(private val project: Project) {
             })
         }
 
-        val parameterPanel = createLabeledPanel("参数 (JSON 格式)", parameterEditor)
-        val sqlPanel = createLabeledPanel("生成的 SQL", sqlEditor)
+        val parameterPanel = createLabeledPanel("参数 (JSON 格式)", parameterEditor.component)
+        val sqlPanel = createLabeledPanel("预览SQL", sqlEditor.component)
         val errorScrollPane = JBScrollPane(errorTextArea).apply { border = JBUI.Borders.empty() }
 
         bottomPanel.add(sqlPanel, SQL_PANEL)
@@ -175,7 +190,7 @@ class SqlPreviewWindow(private val project: Project) {
         return JBPanel<JBPanel<*>>(BorderLayout(0, JBUI.scale(5))).apply {
             val label = JBLabel(labelText).apply { border = JBUI.Borders.empty(5, 8) }
             val wrapper = JBPanel<JBPanel<*>>(BorderLayout()).apply {
-                border = JBUI.Borders.empty(0, 8, 0, 8)
+                border = JBUI.Borders.empty(0, 8)
                 add(component, BorderLayout.CENTER)
             }
             add(label, BorderLayout.NORTH)
@@ -184,8 +199,20 @@ class SqlPreviewWindow(private val project: Project) {
     }
 
     private fun showSql(sql: String) {
-        sqlEditor.text = sql
+        setSqlText(sql)
         bottomCardLayout.show(bottomPanel, SQL_PANEL)
+    }
+
+    private fun setSqlText(sql: String) {
+        WriteCommandAction.runWriteCommandAction(project) {
+            sqlEditor.document.setText(sql)
+        }
+    }
+
+    private fun setParameterText(text: String) {
+        WriteCommandAction.runWriteCommandAction(project) {
+            parameterEditor.document.setText(text)
+        }
     }
 
     private fun showError(message: String) {
@@ -198,5 +225,10 @@ class SqlPreviewWindow(private val project: Project) {
 
     private fun setGenerateButtonEnabled(enabled: Boolean) {
         generateButton.isEnabled = enabled
+    }
+
+    override fun dispose() {
+        EditorFactory.getInstance().releaseEditor(parameterEditor)
+        EditorFactory.getInstance().releaseEditor(sqlEditor)
     }
 }
