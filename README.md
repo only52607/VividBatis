@@ -4,25 +4,16 @@
 [![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 
-## Template ToDo list
-- [x] Create a new [IntelliJ Platform Plugin Template][template] project.
-- [ ] Get familiar with the [template documentation][template].
-- [ ] Adjust the [pluginGroup](./gradle.properties) and [pluginName](./gradle.properties), as well as the [id](./src/main/resources/META-INF/plugin.xml) and [sources package](./src/main/kotlin).
-- [ ] Adjust the plugin description in `README` (see [Tips][docs:plugin-description])
-- [ ] Review the [Legal Agreements](https://plugins.jetbrains.com/docs/marketplace/legal-agreements.html?from=IJPluginTemplate).
-- [ ] [Publish a plugin manually](https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html?from=IJPluginTemplate) for the first time.
-- [ ] Set the `MARKETPLACE_ID` in the above README badges. You can obtain it once the plugin is published to JetBrains Marketplace.
-- [ ] Set the [Plugin Signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html?from=IJPluginTemplate) related [secrets](https://github.com/JetBrains/intellij-platform-plugin-template#environment-variables).
-- [ ] Set the [Deployment Token](https://plugins.jetbrains.com/docs/marketplace/plugin-upload.html?from=IJPluginTemplate).
-- [ ] Click the <kbd>Watch</kbd> button on the top of the [IntelliJ Platform Plugin Template][template] to be notified about releases containing new features and fixes.
-- [ ] Configure the [CODECOV_TOKEN](https://docs.codecov.com/docs/quick-start) secret for automated test coverage reports on PRs
-
 <!-- Plugin description -->
-This Fancy IntelliJ Platform Plugin is going to be your implementation of the brilliant ideas that you have.
+你是否曾为调试 MyBatis 动态 SQL 而烦恼？是否曾因 OGNL 表达式的拼写错误而浪费大量时间？VividBatis 插件正是为了解决这些痛点而生！
 
-This specific section is a source for the [plugin.xml](/src/main/resources/META-INF/plugin.xml) file which will be extracted by the [Gradle](/build.gradle.kts) during the build process.
+它为你带来了两大核心功能：
 
-To keep everything working, do not remove `<!-- ... -->` sections. 
+1.  **SQL 预览，快人一步**：在 Mapper.xml 文件中，只需轻轻一点，即可实时预览渲染后的 SQL 语句。告别繁琐的项目启动和调试过程，让 SQL 调试变得直观、高效。
+
+    ![preview.gif](./gif/preview.gif)
+
+2.  **OGNL 语法高亮，告别手误**：插件为 OGNL 表达式提供了清晰、醒目的语法高亮。无论是 `if`, `choose`, `when`, 还是 `foreach`，都能一目了然，让你在编写复杂动态 SQL 时也能游刃有余，有效避免低级错误。
 <!-- Plugin description end -->
 
 ## Installation
@@ -44,9 +35,11 @@ To keep everything working, do not remove `<!-- ... -->` sections.
   Download the [latest release](https://github.com/only52607/VividBatis/releases/latest) and install it manually using
   <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
 
+## License
+
+This project is licensed under the [GNU General Public License, Version 3.0](LICENSE).
 
 ---
 Plugin based on the [IntelliJ Platform Plugin Template][template].
 
 [template]: https://github.com/JetBrains/intellij-platform-plugin-template
-[docs:plugin-description]: https://plugins.jetbrains.com/docs/intellij/plugin-user-experience.html#plugin-description-and-presentation
