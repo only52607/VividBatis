@@ -12,6 +12,7 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.readAction
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.EditorKind
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.PlainTextFileType
@@ -70,7 +71,7 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
     private val sqlEditor = createEditor(
         project,
         Language.findLanguageByID("SQL")?.associatedFileType ?: PlainTextFileType.INSTANCE,
-        true,
+        false,
         "生成的SQL将显示在这里"
     )
     private val errorTextArea = createErrorTextArea()
@@ -130,6 +131,8 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
             isUseSoftWraps = true
             setTabSize(2)
             isFoldingOutlineShown = true
+            isIndentGuidesShown = true
+            isBlinkCaret = true
         }
         editor.setPlaceholder(placeholder)
         return editor
@@ -163,7 +166,7 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
         }
 
         val parameterPanel = createLabeledPanel("参数 (JSON 格式)", parameterEditor.component)
-        val sqlPanel = createLabeledPanel("预览SQL", sqlEditor.component)
+        val sqlPanel = createLabeledPanel("生成的 SQL", sqlEditor.component)
         val errorScrollPane = JBScrollPane(errorTextArea).apply { border = JBUI.Borders.empty() }
 
         bottomPanel.add(sqlPanel, SQL_PANEL)
@@ -190,7 +193,7 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
         return JBPanel<JBPanel<*>>(BorderLayout(0, JBUI.scale(5))).apply {
             val label = JBLabel(labelText).apply { border = JBUI.Borders.empty(5, 8) }
             val wrapper = JBPanel<JBPanel<*>>(BorderLayout()).apply {
-                border = JBUI.Borders.empty(0, 8)
+                border = JBUI.Borders.empty(0, 8, 0, 8)
                 add(component, BorderLayout.CENTER)
             }
             add(label, BorderLayout.NORTH)
