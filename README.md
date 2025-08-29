@@ -4,16 +4,16 @@
 [![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 
+![logo](src/main/resources/META-INF/pluginIcon.svg)
+
 <!-- Plugin description -->
-你是否曾为调试 MyBatis 动态 SQL 而烦恼？是否曾因 OGNL 表达式的拼写错误而浪费大量时间？VividBatis 插件正是为了解决这些痛点而生！
+Tired of debugging complex dynamic SQL in MyBatis? Wasting time on typos in your OGNL expressions? VividBatis is here to relieve your pain!
 
-它为你带来了两大核心功能：
+It brings you two core features:
 
-1.  **SQL 预览，快人一步**：在 Mapper.xml 文件中，只需轻轻一点，即可实时预览渲染后的 SQL 语句。告别繁琐的项目启动和调试过程，让 SQL 调试变得直观、高效。
+1.  **One-Click SQL Preview**: Instantly preview the rendered SQL statement with a single click on the icon next to the SQL tag in your mapper XML files. Say goodbye to the tedious process of starting your project and debugging. Make your SQL debugging intuitive and efficient.
 
-    ![preview.gif](./gif/preview.gif)
-
-2.  **OGNL 语法高亮，告别手误**：插件为 OGNL 表达式提供了清晰、醒目的语法高亮。无论是 `if`, `choose`, `when`, 还是 `foreach`，都能一目了然，让你在编写复杂动态 SQL 时也能游刃有余，有效避免低级错误。
+2.  **OGNL Syntax Highlighting**: The plugin provides clear and eye-catching syntax highlighting for OGNL expressions. Whether it's `if`, `choose`, `when`, or `foreach`, everything is clear at a glance, helping you write complex dynamic SQL with ease and avoid silly mistakes.
 <!-- Plugin description end -->
 
 ## Installation
