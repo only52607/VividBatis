@@ -1,10 +1,8 @@
-# VividBatis
+# ![logo](src/main/resources/META-INF/pluginIcon.svg) VividBatis
 
 ![Build](https://github.com/only52607/VividBatis/workflows/Build/badge.svg)
 [![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
-
-![logo](src/main/resources/META-INF/pluginIcon.svg)
 
 <!-- Plugin description -->
 Tired of debugging complex dynamic SQL in MyBatis? Wasting time on typos in your OGNL expressions? VividBatis is here to relieve your pain!
@@ -15,6 +13,8 @@ It brings you two core features:
 
 2.  **OGNL Syntax Highlighting**: The plugin provides clear and eye-catching syntax highlighting for OGNL expressions. Whether it's `if`, `choose`, `when`, or `foreach`, everything is clear at a glance, helping you write complex dynamic SQL with ease and avoid silly mistakes.
 <!-- Plugin description end -->
+
+![logo](gif/preview.gif)
 
 ## Installation
 
