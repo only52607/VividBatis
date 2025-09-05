@@ -209,13 +209,20 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
     }
 
     private fun createLabeledPanel(labelText: String, component: Component, leftComponent: Component?): JPanel {
-        val labelPanel = JPanel(BorderLayout()).apply {
+        val labelPanel = JPanel(GridBagLayout()).apply {
             border = JBUI.Borders.empty(5, 8)
-            add(JBLabel(labelText), BorderLayout.CENTER)
+            val gbc = GridBagConstraints()
+            gbc.anchor = GridBagConstraints.WEST
+
             leftComponent?.let {
                 it.isVisible = false
-                add(it, BorderLayout.WEST)
+                gbc.weightx = 0.0
+                add(it, gbc)
             }
+
+            gbc.weightx = 1.0
+            gbc.fill = GridBagConstraints.HORIZONTAL
+            add(JBLabel(labelText), gbc)
         }
         return JBPanel<JBPanel<*>>(BorderLayout(0, JBUI.scale(5))).apply {
             val wrapper = JBPanel<JBPanel<*>>(BorderLayout()).apply {
