@@ -248,7 +248,9 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
                 .createHtmlTextBalloonBuilder("SQL generation produced warnings", MessageType.WARNING, null)
                 .setFadeoutTime(5000)
                 .createBalloon()
-            balloon.show(RelativePoint.getNorthWestOf(warningButton), Balloon.Position.atRight)
+            EventQueue.invokeLater {
+                balloon.show(RelativePoint.getSouthOf(warningButton), Balloon.Position.below)
+            }
         }
     }
 
