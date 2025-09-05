@@ -8,6 +8,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.xml.XmlTag
 import ognl.Ognl
 import ognl.OgnlContext
+import ognl.OgnlException
 
 class SqlGenerator(
     val project: Project,
@@ -20,20 +21,36 @@ class SqlGenerator(
             ?: throw RuntimeException("未找到MyBatis映射文件: ${statementPath.namespace}")
     }
 
-    fun generate(parameterJson: String): String {
+    private val warnings = mutableListOf<String>()
+
+    private fun getValueOrDefault(
+        expression: String,
+        context: OgnlContext,
+        root: Any,
+        defaultValue: Any?,
+    ): Any? {
+        return try {
+            Ognl.getValue(expression, context, root)
+        } catch (e: OgnlException) {
+            warnings.add("Failed to evaluate OGNL expression: '$expression'. Error: ${e.reason}. Using default value: '$defaultValue'")
+            defaultValue
+        }
+    }
+
+    fun generate(parameterJson: String): Pair<String, List<String>> {
         val parameterInfo = ParameterAnalyzer.getStatementParameterInfo(project, statementPath)
         val rootObject = parameterInfo.createRootObject(gson.fromJson(parameterJson, JsonElement::class.java))
         return generate(rootObject)
     }
 
-    fun generate(rootObject: Any?): String {
+    fun generate(rootObject: Any?): Pair<String, List<String>> {
         val statementTag = mapperFile.findMybatisStatementById(statementPath.statementId)
             ?: throw RuntimeException("Statement tag not found: ${statementPath.statementId}")
         val sql = processXmlTag(
             statementTag,
             Ognl.createDefaultContext(rootObject) as OgnlContext
         )
-        return formatSql(sql)
+        return sql.trimStart().trimIndent() to warnings
     }
 
     private fun processXmlTag(tag: XmlTag, context: OgnlContext): String {
@@ -74,7 +91,7 @@ class SqlGenerator(
 
     private fun processConditionalTag(tag: XmlTag, context: OgnlContext): String {
         val test = tag.getAttributeValue("test") ?: return ""
-        return if (Ognl.getValue(test, context, context.root).asBoolean()) {
+        return if (getValueOrDefault(test, context, context.root, false).asBoolean()) {
             processChildTags(tag, context)
         } else ""
     }
@@ -87,7 +104,7 @@ class SqlGenerator(
         val close = tag.getAttributeValue("close") ?: ""
         val separator = tag.getAttributeValue("separator") ?: ","
 
-        val collectionValue = Ognl.getValue(collection, context, context.root)
+        val collectionValue = getValueOrDefault(collection, context, context.root, emptyList<Any>())
 
         val collectionList = when (collectionValue) {
             is List<*> -> collectionValue
@@ -214,7 +231,7 @@ class SqlGenerator(
         tag.subTags.forEach { child ->
             if (child.name == "when") {
                 val test = child.getAttributeValue("test")
-                if (test != null && Ognl.getValue(test, context, context.root).asBoolean()) {
+                if (test != null && getValueOrDefault(test, context, context.root, false).asBoolean()) {
                     return processChildTags(child, context)
                 }
             }
@@ -237,7 +254,7 @@ class SqlGenerator(
                         val name = child.getAttributeValue("name")
                         val value = child.getAttributeValue("value")
                         if (name != null && value != null) {
-                            val bindValue = Ognl.getValue(value, context, context.root)
+                            val bindValue = getValueOrDefault(value, context, context.root, null)
                             currentRoot = ExtendedRootObject(currentRoot, mapOf(name to bindValue))
                             currentContext = Ognl.createDefaultContext(currentRoot) as OgnlContext
                         }
@@ -265,7 +282,7 @@ class SqlGenerator(
         pattern.findAll(text).forEach { match ->
             val variableName = match.groupValues[1]
             val value = includeParameters[variableName]
-                ?: Ognl.getValue(variableName, context, context.root).toString()
+                ?: getValueOrDefault(variableName, context, context.root, "").toString()
             result = result.replace(match.value, value)
         }
 
@@ -282,7 +299,7 @@ class SqlGenerator(
                 val keyValue = it.split("=")
                 keyValue[0].trim() to keyValue.getOrNull(1)?.trim()
             }
-            val value = Ognl.getValue(paramName, context, context.root).toString()
+            val value = getValueOrDefault(paramName, context, context.root, "''").toString()
             when (value) {
                 else -> "'$value'"
             }
@@ -290,19 +307,10 @@ class SqlGenerator(
 
         result = "\\$\\{([^}]+)}".toRegex().replace(result) { match ->
             val paramName = match.groupValues[1]
-            Ognl.getValue(paramName, context, context.root).toString()
+            getValueOrDefault(paramName, context, context.root, "").toString()
         }
 
         return result
-    }
-
-    private fun formatSql(sql: String): String {
-        return sql
-            .replace("\\s+".toRegex(), " ")
-            .replace("\\( ".toRegex(), "(")
-            .replace(" \\)".toRegex(), ")")
-            .replace(" ,".toRegex(), ",")
-            .trim()
     }
 
     fun Any?.asBoolean(): Boolean {

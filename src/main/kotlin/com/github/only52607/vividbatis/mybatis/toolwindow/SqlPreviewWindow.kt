@@ -8,6 +8,11 @@ import com.google.gson.GsonBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.impl.ActionButton
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.readAction
 import com.intellij.openapi.command.WriteCommandAction
@@ -17,16 +22,17 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.MessageType
+import com.intellij.openapi.ui.popup.Balloon
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.JBColor
 import com.intellij.ui.JBSplitter
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBPanel
-import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextArea
+import com.intellij.ui.awt.RelativePoint
+import com.intellij.ui.components.*
 import com.intellij.ui.content.ContentFactory
 import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CoroutineScope
@@ -80,6 +86,20 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
     private val gson = GsonBuilder().setPrettyPrinting().create()
 
     private var currentStatement: StatementPath? = null
+    private var warnings: List<String> = emptyList()
+
+    private val warningAction = object : AnAction("Show Warnings", "Show SQL generation warnings", AllIcons.General.Warning) {
+        override fun actionPerformed(e: AnActionEvent) {
+            showWarningsPopup()
+        }
+    }
+
+    private val warningButton = ActionButton(
+        warningAction,
+        warningAction.templatePresentation,
+        ActionPlaces.UNKNOWN,
+        ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE
+    )
 
     val contentPanel: JPanel = buildMainPanel()
 
@@ -109,10 +129,10 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
         currentStatement?.let {
             scope.launch {
                 try {
-                    val generatedSql = readAction {
+                    val (generatedSql, newWarnings) = readAction {
                         SqlGenerator(project, it).generate(parameterEditor.document.text)
                     }
-                    showSql(generatedSql)
+                    showSql(generatedSql, newWarnings)
                 } catch (e: Exception) {
                     val errorMessage = "生成 SQL 失败:\n\n${e.stackTraceToString()}"
                     showError(errorMessage)
@@ -164,8 +184,8 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
             })
         }
 
-        val parameterPanel = createLabeledPanel("参数 (JSON 格式)", parameterEditor.component)
-        val sqlPanel = createLabeledPanel("生成的 SQL", sqlEditor.component)
+        val parameterPanel = createLabeledPanel("参数 (JSON 格式)", parameterEditor.component, null)
+        val sqlPanel = createLabeledPanel("生成的 SQL", sqlEditor.component, warningButton)
         val errorScrollPane = JBScrollPane(errorTextArea).apply { border = JBUI.Borders.empty() }
 
         bottomPanel.add(sqlPanel, SQL_PANEL)
@@ -188,21 +208,54 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
         }
     }
 
-    private fun createLabeledPanel(labelText: String, component: Component): JPanel {
+    private fun createLabeledPanel(labelText: String, component: Component, leftComponent: Component?): JPanel {
+        val labelPanel = JPanel(BorderLayout()).apply {
+            border = JBUI.Borders.empty(5, 8)
+            add(JBLabel(labelText), BorderLayout.CENTER)
+            leftComponent?.let {
+                it.isVisible = false
+                add(it, BorderLayout.WEST)
+            }
+        }
         return JBPanel<JBPanel<*>>(BorderLayout(0, JBUI.scale(5))).apply {
-            val label = JBLabel(labelText).apply { border = JBUI.Borders.empty(5, 8) }
             val wrapper = JBPanel<JBPanel<*>>(BorderLayout()).apply {
-                border = JBUI.Borders.empty(0, 8, 0, 8)
+                border = JBUI.Borders.empty(0, 8)
                 add(component, BorderLayout.CENTER)
             }
-            add(label, BorderLayout.NORTH)
+            add(labelPanel, BorderLayout.NORTH)
             add(wrapper, BorderLayout.CENTER)
         }
     }
 
-    private fun showSql(sql: String) {
+    private fun showSql(sql: String, newWarnings: List<String>) {
+        this.warnings = newWarnings
         setSqlText(sql)
         bottomCardLayout.show(bottomPanel, SQL_PANEL)
+        updateWarningsUI()
+    }
+
+    private fun updateWarningsUI() {
+        warningButton.isVisible = warnings.isNotEmpty()
+        if (warnings.isNotEmpty()) {
+            val balloon = JBPopupFactory.getInstance()
+                .createHtmlTextBalloonBuilder("SQL generation produced warnings", MessageType.WARNING, null)
+                .setFadeoutTime(5000)
+                .createBalloon()
+            balloon.show(RelativePoint.getNorthWestOf(warningButton), Balloon.Position.atRight)
+        }
+    }
+
+    private fun showWarningsPopup() {
+        if (warnings.isEmpty()) return
+
+        val listModel = JBList(warnings)
+        val popup = JBPopupFactory.getInstance()
+            .createComponentPopupBuilder(JBScrollPane(listModel), listModel)
+            .setTitle("Generation Warnings")
+            .setMovable(true)
+            .setResizable(true)
+            .createPopup()
+        popup.showInCenterOf(contentPanel)
     }
 
     private fun setSqlText(sql: String) {
