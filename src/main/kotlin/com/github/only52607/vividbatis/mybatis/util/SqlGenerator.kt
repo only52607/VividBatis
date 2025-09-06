@@ -5,6 +5,7 @@ import com.github.only52607.vividbatis.model.StatementPath
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.xml.XmlTag
 import ognl.Ognl
 import ognl.OgnlContext
@@ -258,13 +259,13 @@ class SqlGenerator(
                             currentRoot = ExtendedRootObject(currentRoot, mapOf(name to bindValue))
                             currentContext = Ognl.createDefaultContext(currentRoot) as OgnlContext
                         }
-                    }
-                    else {
+                    } else {
                         builder.append(processXmlTag(child, currentContext))
                     }
                 }
+
                 else -> {
-                    val text = child.text
+                    val text = StringUtil.unescapeXmlEntities(child.text)
                     if (text.isNotBlank()) {
                         builder.append(replaceParameters(text, currentContext))
                     }

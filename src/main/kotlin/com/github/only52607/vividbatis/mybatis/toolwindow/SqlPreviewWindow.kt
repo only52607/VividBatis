@@ -1,6 +1,7 @@
 package com.github.only52607.vividbatis.mybatis.toolwindow
 
 
+import com.github.only52607.vividbatis.common.MyBundle
 import com.github.only52607.vividbatis.model.StatementPath
 import com.github.only52607.vividbatis.mybatis.util.ParameterAnalyzer
 import com.github.only52607.vividbatis.mybatis.util.SqlGenerator
@@ -43,6 +44,7 @@ import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.JButton
+import javax.swing.JCheckBox
 import javax.swing.JPanel
 
 private const val SQL_PANEL = "SQL_PANEL"
@@ -57,7 +59,7 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
         override fun shouldBeAvailable(project: Project) = true
         override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
             val sqlPreviewWindow = SqlPreviewWindow(project)
-            val content = ContentFactory.getInstance().createContent(sqlPreviewWindow.contentPanel, "SQL 预览", false)
+            val content = ContentFactory.getInstance().createContent(sqlPreviewWindow.contentPanel, MyBundle.message("vividbatis.toolwindow.title.preview"), false)
             content.putUserData(PREVIEW_WINDOW_KEY, sqlPreviewWindow)
             Disposer.register(content, sqlPreviewWindow)
             toolWindow.contentManager.addContent(content)
@@ -66,18 +68,18 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.EDT)
 
-    private val statementInfoLabel = JBLabel("请选择一个 SQL 语句标签")
+    private val statementInfoLabel = JBLabel(MyBundle.message("vividbatis.toolwindow.select.statement.default"))
     private val parameterEditor = createEditor(
         project,
         Language.findLanguageByID("JSON")?.associatedFileType ?: PlainTextFileType.INSTANCE,
         false,
-        "请输入JSON格式的参数"
+        MyBundle.message("vividbatis.toolwindow.json.editor.placeholder")
     )
     private val sqlEditor = createEditor(
         project,
         Language.findLanguageByID("SQL")?.associatedFileType ?: PlainTextFileType.INSTANCE,
-        false,
-        "生成的SQL将显示在这里"
+        true,
+        MyBundle.message("vividbatis.toolwindow.sql.editor.placeholder")
     )
     private val errorTextArea = createErrorTextArea()
     private val bottomCardLayout = CardLayout()
@@ -88,7 +90,11 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
     private var currentStatement: StatementPath? = null
     private var warnings: List<String> = emptyList()
 
-    private val warningAction = object : AnAction("Show Warnings", "Show SQL generation warnings", AllIcons.General.Warning) {
+    private val warningAction = object : AnAction(
+        MyBundle.message("vividbatis.action.show.warnings.text"),
+        MyBundle.message("vividbatis.action.show.warnings.description"),
+        AllIcons.General.Warning
+    ) {
         override fun actionPerformed(e: AnActionEvent) {
             showWarningsPopup()
         }
@@ -105,7 +111,7 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
 
     fun processStatementSelection(statementPath: StatementPath, statementType: String) {
         currentStatement = statementPath
-        statementInfoLabel.text = "$statementPath [${statementType}]"
+        statementInfoLabel.text = MyBundle.message("vividbatis.toolwindow.statement.info.format", statementPath, statementType)
         setSqlText("")
 
         scope.launch {
@@ -117,9 +123,10 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
                 setGenerateButtonEnabled(true)
                 generateSql()
             } catch (e: Exception) {
-                setParameterText("// 无法分析参数类型: ${e.message}")
+                setParameterText(MyBundle.message("vividbatis.error.analyze.parameter.short", e.message ?: ""))
                 setGenerateButtonEnabled(false)
-                val errorMessage = "参数分析失败:\n\n${e.stackTraceToString()}"
+                val stackTrace = e.stackTraceToString()
+                val errorMessage = MyBundle.message("vividbatis.error.analyze.parameter.detailed", stackTrace)
                 showError(errorMessage)
             }
         }
@@ -134,7 +141,8 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
                     }
                     showSql(generatedSql, newWarnings)
                 } catch (e: Exception) {
-                    val errorMessage = "生成 SQL 失败:\n\n${e.stackTraceToString()}"
+                    val stackTrace = e.stackTraceToString()
+                    val errorMessage = MyBundle.message("vividbatis.error.generate.sql.detailed", stackTrace)
                     showError(errorMessage)
                 }
             }
@@ -147,7 +155,7 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
         val editor = editorFactory.createEditor(document, project, fileType, isViewer) as EditorEx
         editor.settings.apply {
             isLineNumbersShown = true
-            isUseSoftWraps = true
+            isUseSoftWraps = false
             setTabSize(2)
             isFoldingOutlineShown = true
             isIndentGuidesShown = true
@@ -166,7 +174,7 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
         border = JBUI.Borders.empty(8)
     }
 
-    private fun createGenerateButton() = JButton("预览 SQL").apply {
+    private fun createGenerateButton() = JButton(MyBundle.message("vividbatis.toolwindow.button.preview")).apply {
         isEnabled = false
         icon = AllIcons.Actions.Execute
         addActionListener { generateSql() }
@@ -184,8 +192,18 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
             })
         }
 
-        val parameterPanel = createLabeledPanel("参数 (JSON 格式)", parameterEditor.component, null)
-        val sqlPanel = createLabeledPanel("生成的 SQL", sqlEditor.component, warningButton)
+        val parameterPanel = createLabeledPanel(
+            MyBundle.message("vividbatis.toolwindow.parameters.label"),
+            parameterEditor.component,
+            null,
+            createWordWrapCheckbox(parameterEditor)
+        )
+        val sqlPanel = createLabeledPanel(
+            MyBundle.message("vividbatis.toolwindow.generated.sql.label"),
+            sqlEditor.component,
+            warningButton,
+            createWordWrapCheckbox(sqlEditor)
+        )
         val errorScrollPane = JBScrollPane(errorTextArea).apply { border = JBUI.Borders.empty() }
 
         bottomPanel.add(sqlPanel, SQL_PANEL)
@@ -208,7 +226,20 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
         }
     }
 
-    private fun createLabeledPanel(labelText: String, component: Component, leftComponent: Component?): JPanel {
+    private fun createWordWrapCheckbox(editor: EditorEx) =
+        JCheckBox(MyBundle.message("vividbatis.toolwindow.toggle.wordwrap")).apply {
+            isSelected = editor.settings.isUseSoftWraps
+            addActionListener {
+                editor.settings.isUseSoftWraps = this.isSelected
+            }
+        }
+
+    private fun createLabeledPanel(
+        labelText: String,
+        component: Component,
+        leftComponent: Component?,
+        rightComponent: Component?
+    ): JPanel {
         val labelPanel = JPanel(GridBagLayout()).apply {
             border = JBUI.Borders.empty(5, 8)
             val gbc = GridBagConstraints()
@@ -216,13 +247,23 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
 
             leftComponent?.let {
                 it.isVisible = false
+                gbc.gridx = 0
                 gbc.weightx = 0.0
                 add(it, gbc)
             }
 
+            gbc.gridx = 1
             gbc.weightx = 1.0
             gbc.fill = GridBagConstraints.HORIZONTAL
             add(JBLabel(labelText), gbc)
+
+            rightComponent?.let {
+                gbc.gridx = 2
+                gbc.weightx = 0.0
+                gbc.anchor = GridBagConstraints.EAST
+                gbc.fill = GridBagConstraints.NONE
+                add(it, gbc)
+            }
         }
         return JBPanel<JBPanel<*>>(BorderLayout(0, JBUI.scale(5))).apply {
             val wrapper = JBPanel<JBPanel<*>>(BorderLayout()).apply {
@@ -245,7 +286,7 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
         warningButton.isVisible = warnings.isNotEmpty()
         if (warnings.isNotEmpty()) {
             val balloon = JBPopupFactory.getInstance()
-                .createHtmlTextBalloonBuilder("SQL generation produced warnings", MessageType.WARNING, null)
+                .createHtmlTextBalloonBuilder(MyBundle.message("vividbatis.warning.generation.title"), MessageType.WARNING, null)
                 .setFadeoutTime(5000)
                 .createBalloon()
             EventQueue.invokeLater {
@@ -260,7 +301,7 @@ class SqlPreviewWindow(private val project: Project) : Disposable {
         val listModel = JBList(warnings)
         val popup = JBPopupFactory.getInstance()
             .createComponentPopupBuilder(JBScrollPane(listModel), listModel)
-            .setTitle("Generation Warnings")
+            .setTitle(MyBundle.message("vividbatis.warning.popup.title"))
             .setMovable(true)
             .setResizable(true)
             .createPopup()
