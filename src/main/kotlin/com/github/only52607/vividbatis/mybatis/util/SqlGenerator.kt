@@ -5,8 +5,8 @@ import com.github.only52607.vividbatis.model.StatementPath
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.xml.XmlTag
+import com.intellij.psi.xml.XmlText
 import ognl.Ognl
 import ognl.OgnlContext
 import ognl.OgnlException
@@ -249,8 +249,8 @@ class SqlGenerator(
         var currentRoot = context.root
 
         tag.value.children.forEach { child ->
-            when {
-                child is XmlTag -> {
+            when (child) {
+                is XmlTag -> {
                     if (child.name == "bind") {
                         val name = child.getAttributeValue("name")
                         val value = child.getAttributeValue("value")
@@ -263,9 +263,14 @@ class SqlGenerator(
                         builder.append(processXmlTag(child, currentContext))
                     }
                 }
-
+                is XmlText -> {
+                    val text = child.value
+                    if (text.isNotBlank()) {
+                        builder.append(replaceParameters(text, currentContext))
+                    }
+                }
                 else -> {
-                    val text = StringUtil.unescapeXmlEntities(child.text)
+                    val text = child.text
                     if (text.isNotBlank()) {
                         builder.append(replaceParameters(text, currentContext))
                     }
