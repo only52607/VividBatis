@@ -1,8 +1,8 @@
 # ![logo](src/main/resources/META-INF/pluginIcon.svg) VividBatis
 
 ![Build](https://github.com/only52607/VividBatis/workflows/Build/badge.svg)
-[![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/28245-vividbatis)
-[![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/28245-vividbatis)
+[![Version](https://img.shields.io/jetbrains/plugin/v/28245-vividbatis.svg)](https://plugins.jetbrains.com/plugin/28245-vividbatis)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/28245-vividbatis.svg)](https://plugins.jetbrains.com/plugin/28245-vividbatis)
 
 <!-- Plugin description -->
 Tired of debugging complex dynamic SQL in MyBatis? Wasting time on typos in your OGNL expressions? VividBatis is here to relieve your pain!
