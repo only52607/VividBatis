@@ -1,5 +1,5 @@
 <idea-plugin>
     <extensions defaultExtensionNs="org.intellij.intelliLang">
-        <injectionConfig config="resources/mybatis-ognl-injection-rules.xml"/>
+        <injectionConfig config="mybatis-ognl-injection-rules.xml"/>
     </extensions>
 </idea-plugin>
