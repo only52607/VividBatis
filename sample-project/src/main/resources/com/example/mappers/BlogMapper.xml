@@ -126,4 +126,13 @@
         SELECT * FROM blog WHERE title LIKE #{pattern}
     </select>
 
+    <!-- CDATA and HTML entities test -->
+    <select id="selectWithCdataAndHtmlEntities" resultType="Blog">
+        SELECT * FROM blog WHERE content LIKE '%
+        <if test="criteria != null and criteria.key != null">
+            <![CDATA[ & ]]> <if test="criteria.key &gt; 10"> key &gt; 10 </if>
+        </if>
+        %'
+    </select>
+
 </mapper>
