@@ -51,7 +51,7 @@ class SqlGenerator(
             statementTag,
             Ognl.createDefaultContext(rootObject) as OgnlContext
         )
-        return sql.trimStart().trimIndent() to warnings
+        return sql.trimIndent() to warnings
     }
 
     private fun processXmlTag(tag: XmlTag, context: OgnlContext): String {
@@ -305,7 +305,7 @@ class SqlGenerator(
                 val keyValue = it.split("=")
                 keyValue[0].trim() to keyValue.getOrNull(1)?.trim()
             }
-            val value = getValueOrDefault(paramName, context, context.root, "''").toString()
+            val value = getValueOrDefault(paramName, context, context.root, "").toString()
             when (value) {
                 else -> "'$value'"
             }
