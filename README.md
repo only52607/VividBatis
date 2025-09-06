@@ -1,5 +1,7 @@
 # ![logo](src/main/resources/META-INF/pluginIcon.svg) VividBatis
 
+[简体中文](README_zh-CN.md)
+
 ![Build](https://github.com/only52607/VividBatis/workflows/Build/badge.svg)
 [![Version](https://img.shields.io/jetbrains/plugin/v/28245-vividbatis.svg)](https://plugins.jetbrains.com/plugin/28245-vividbatis)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/28245-vividbatis.svg)](https://plugins.jetbrains.com/plugin/28245-vividbatis)
