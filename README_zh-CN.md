@@ -5,13 +5,13 @@
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/28245-vividbatis.svg)](https://plugins.jetbrains.com/plugin/28245-vividbatis)
 
 <!-- Plugin description -->
-厌倦了在MyBatis中调试复杂的动态SQL？还在为OGNL表达式中的拼写错误浪费时间吗？VividBatis将为您排忧解难！
+VividBatis: SQL预览与OGNL高亮。
+此插件协助处理MyBatis动态SQL和OGNL表达式。
 
-它为您带来两大核心功能：
+主要功能：
 
-1.  **一键SQL预览**：在您的mapper XML文件中，只需单击SQL标签旁边的图标，即可立即预览渲染后的SQL语句。告别启动项目和调试的繁琐过程。让您的SQL调试直观高效。
-
-2.  **OGNL语法高亮**：该插件为OGNL表达式提供了清晰醒目的语法高亮。无论是`if`、`choose`、`when`还是`foreach`，一切都一目了然，帮助您轻松编写复杂的动态SQL，避免低级错误。
+*   **一键SQL预览**：直接从mapper XML文件即时预览渲染后的SQL语句。这消除了项目启动和手动调试的需要。
+*   **OGNL语法高亮**：为OGNL表达式提供语法高亮，包括`if`、`choose`、`when`和`foreach`。这提高了可读性并有助于防止常见错误。
 <!-- Plugin description end -->
 
 ![logo](gif/preview.gif)
