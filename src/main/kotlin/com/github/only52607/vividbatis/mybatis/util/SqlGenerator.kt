@@ -5,6 +5,7 @@ import com.github.only52607.vividbatis.model.StatementPath
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.intellij.openapi.project.Project
+import com.intellij.psi.xml.XmlComment
 import com.intellij.psi.xml.XmlTag
 import com.intellij.psi.xml.XmlText
 import ognl.Ognl
@@ -268,6 +269,9 @@ class SqlGenerator(
                     if (text.isNotBlank()) {
                         builder.append(replaceParameters(text, currentContext))
                     }
+                }
+                is XmlComment -> {
+                    builder.append("/* ${child.commentText} */")
                 }
                 else -> {
                     val text = child.text
